@@ -4,8 +4,15 @@
     "slug": "expense-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
+    "plugins": [
+      [
+        "expo-router"
+      ],
+      "expo-font"
+    ],
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "expense-tracker",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
