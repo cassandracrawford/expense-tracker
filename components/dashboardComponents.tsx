@@ -93,7 +93,7 @@ export function DonutChart({
             stroke={colorDark}
             strokeWidth={strokeWidth}
             strokeDasharray={`${(darkPercent / 100) * circumference}, ${circumference}`}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             fill="none"
           />
           {/* Light portion */}
@@ -105,7 +105,7 @@ export function DonutChart({
             strokeWidth={strokeWidth}
             strokeDasharray={`${(lightPercent / 100) * circumference}, ${circumference}`}
             strokeDashoffset={(darkPercent / 100) * circumference * -1}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             fill="none"
           />
         </G>
