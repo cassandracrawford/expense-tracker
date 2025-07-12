@@ -4,16 +4,13 @@
     "slug": "expense-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "expense-tracker",
+    "userInterfaceStyle": "light",
     "plugins": [
-      [
-        "expo-router"
-      ],
+      "expo-router",
       "expo-font"
     ],
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "scheme": "expense-tracker",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -27,10 +24,27 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "expense-tracker",
+              "host": "auth",
+              "pathPrefix": "/callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "supabaseUrl": "https://hbnayglipavgedyzurhw.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibmF5Z2xpcGF2Z2VkeXp1cmh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwODE0NjMsImV4cCI6MjA2NzY1NzQ2M30.O0c-dIOIDcSnGi0TMohTPaDx_WeU9j7H25UQ_gpLhL4"
     }
   }
 }
