@@ -1,4 +1,3 @@
-// app/auth/callback.tsx
 import { useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';

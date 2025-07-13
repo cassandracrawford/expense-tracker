@@ -46,7 +46,7 @@ export default function RegisterScreen() {
         options: {
           emailRedirectTo: 'expense-tracker://auth/callback',
           data: {
-            full_name: trimmedName, // ✅ stored in metadata
+            full_name: trimmedName, 
           },
         },
       });
@@ -57,7 +57,7 @@ export default function RegisterScreen() {
         return;
       }
 
-      // ✅ Insert full_name into users table
+      
       const userId = data.user?.id;
       if (userId) {
         const { error: insertError } = await supabase

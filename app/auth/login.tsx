@@ -28,7 +28,7 @@ export default function LoginScreen() {
     if (error) {
       Alert.alert('Login Failed', error.message);
     } else {
-      // 🔍 Optional: debug session confirmation
+      // debug
       const sessionResult = await supabase.auth.getSession();
       console.log('🟢 Session after login:', sessionResult.data.session);
 
@@ -36,7 +36,7 @@ export default function LoginScreen() {
         Alert.alert('Warning', 'Login successful but no session detected.');
       }
 
-      // ✅ Go to dashboard/tabs
+      
       router.replace('/tabs/');
     }
   };
