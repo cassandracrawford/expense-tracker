@@ -8,12 +8,14 @@ import {
   Platform,
   KeyboardAvoidingView,
   SafeAreaView,
-  ScrollView
+  ScrollView,
+  Alert
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import supabase from '@/lib/supabase';
 
 export default function AddExpenseScreen() {
   const router = useRouter();
