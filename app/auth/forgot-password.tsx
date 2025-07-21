@@ -5,7 +5,7 @@ import LoginButton from "../../components/loginButton";
 import LoginForm from "../../components/loginForm";
 import { Link } from "expo-router";
 import { useState } from "react";
-import { supabase } from '../../lib/supabase';
+import supabase from '../../lib/supabase';
 
 export default function ForgotPasswordScreen() {
   const [emailSent, setEmailSent] = useState(false);

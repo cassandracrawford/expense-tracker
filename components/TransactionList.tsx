@@ -35,10 +35,10 @@ const TransactionList = ({ transactions }: Props) => {
 
   return (
     <FlatList
-      data={transactions.slice(0, 4)} // only show the latest 4
+      data={transactions.slice(0, 4)} 
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
-      scrollEnabled={false} // disable scroll so it blends into dashboard
+      scrollEnabled={false} 
     />
   );
 };

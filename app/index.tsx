@@ -4,7 +4,7 @@ import { useFonts as useCodystarFonts, Codystar_400Regular } from '@expo-google-
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import LoginButton from '../components/loginButton';
 import { useRouter } from 'expo-router';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase';
 
 
 

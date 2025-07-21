@@ -18,7 +18,7 @@ import {
 } from '@expo-google-fonts/poppins';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import supabase from '../../lib/supabase';
 import { DonutChart, ReminderCard } from '../../components/dashboardComponents';
 import TransactionList, { TransactionItem } from '../../components/TransactionList';
 
@@ -49,7 +49,7 @@ export default function Dashboard() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('❌ Auth error:', authError?.message || 'No user found');
+        console.error('Auth error:', authError?.message || 'No user found');
         return;
       }
 
@@ -62,8 +62,11 @@ export default function Dashboard() {
 
         let firstName = 'User';
         if (error) {
-          console.error('❌ Error fetching full_name:', error.message);
+          console.error('Error fetching full_name:', error.message);
         } else if (!data) {
+          // fallback to metadata, user row not found 
+          const firstName = (user.user_metadata?.full_name || 'User').split(' ')[0];
+          setUserName(firstName);
           console.warn('⚠️ No user row found, falling back to metadata');
           firstName = (user.user_metadata?.full_name || 'User').split(' ')[0];
         } else {
@@ -73,7 +76,7 @@ export default function Dashboard() {
         setUserName(firstName);
         await fetchTransactions(user.id);
       } catch (e) {
-        console.error('❌ Unexpected error:', e);
+        console.error('Unexpected error:', e);
       }
     };
 
@@ -124,6 +127,28 @@ export default function Dashboard() {
             </View>
           </View>
           <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href='/tabs/report'>View Breakdown</Link>
+      <View style={[styles.subContainer, { paddingTop: 30}]}>
+        <View style={{ flexDirection: 'column', gap: 20 }}>
+          <DonutChart percentage={0} />
+          <View style={{ flexDirection: 'column', gap: 20 }}>
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
+                  <Text style={styles.chartLabel}>Total Budget</Text>
+                </View>
+                <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$0</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
+                  <Text style={styles.chartLabel}>Total Spent</Text>
+                </View>
+                <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$0</Text>
+              </View>
+            </View>
+            <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href='/tabs/report'>View Breakdown</Link>
+          </View>
         </View>
       </View>
 
@@ -155,7 +180,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontFamily: 'OpenSans_700Bold',
     color: '#3A2A21',
   },
