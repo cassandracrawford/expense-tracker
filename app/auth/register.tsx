@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import LoginButton from '../../components/loginButton';
 import LoginForm from '../../components/loginForm';
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import supabase from '../../lib/supabase';
 
 export default function RegisterScreen() {
   const [montserratLoaded] = useMontserratFonts({ Montserrat_400Regular, Montserrat_700Bold });
@@ -21,11 +21,21 @@ export default function RegisterScreen() {
 
   if (!montserratLoaded || !opensansLoaded) return null;
 
+  const isValidEmail = (email: string) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+  };
+
   const handleRegister = async () => {
     const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
     const trimmedConfirmPassword = confirmPassword.trim();
+
+    if (!isValidEmail(trimmedEmail)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
 
     if (!trimmedName || !trimmedEmail || !trimmedPassword || !trimmedConfirmPassword) {
       Alert.alert('Missing Info', 'Please fill in all fields.');
@@ -52,7 +62,7 @@ export default function RegisterScreen() {
       });
 
       if (error) {
-        console.error('❌ Sign Up Error:', error.message);
+        console.error('Sign Up Error:', error.message);
         Alert.alert('Registration Error', error.message);
         return;
       }
@@ -65,7 +75,7 @@ export default function RegisterScreen() {
           .insert({ id: userId, full_name: trimmedName });
 
         if (insertError) {
-          console.error('❌ Error inserting into users table:', insertError.message);
+          console.error('Error inserting into users table:', insertError.message);
         }
       }
 
@@ -75,7 +85,7 @@ export default function RegisterScreen() {
         [{ text: 'OK', onPress: () => router.replace('/tabs') }]
       );
     } catch (err: any) {
-      console.error('❌ Unexpected Error:', err);
+      console.error('Unexpected Error:', err);
       Alert.alert('Error', 'Something went wrong during registration.');
     } finally {
       setIsSubmitting(false);

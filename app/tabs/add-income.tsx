@@ -237,7 +237,9 @@ const styles = StyleSheet.create({
   },
   cardBox: {
     backgroundColor: '#FBECE3',
-    padding: 15,
+    paddingTop: 14,
+    paddingBottom: 20,
+    paddingHorizontal: 15,
     borderRadius: 12,
     marginBottom: 15,
   },
@@ -275,7 +277,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#fff',
     paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingVertical: 0,
   },
   amountSymbol: {
     fontSize: 30,
@@ -354,7 +356,9 @@ const styles = StyleSheet.create({
   recurrenceBox: {
     backgroundColor: '#C67C4F',
     borderRadius: 10,
-    padding: 12,
+    paddingBottom: 20,
+    paddingTop: 14,
+    paddingHorizontal: 20,
     marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,10 +381,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     paddingVertical: 12,
     borderRadius: 20,
+    width: '45%',
   },
   saveButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+    textAlign: 'center',
   },
 });

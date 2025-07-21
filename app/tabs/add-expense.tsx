@@ -8,6 +8,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   SafeAreaView,
+  ScrollView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -52,7 +53,7 @@ export default function AddExpenseScreen() {
   ]);
 
   return (
-    <SafeAreaView style={styles.scroll}>
+    <ScrollView style={styles.scroll}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -217,7 +218,7 @@ export default function AddExpenseScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
@@ -233,7 +234,9 @@ const styles = StyleSheet.create({
   },
   cardBox: {
     backgroundColor: '#F5E5DC',
-    padding: 15,
+    paddingTop: 14,
+    paddingBottom: 20,
+    paddingHorizontal: 15,
     borderRadius: 12,
     marginBottom: 15,
   },
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#fff',
     paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingVertical: 0,
   },
   amountSymbol: {
     fontSize: 30,
@@ -350,7 +353,9 @@ const styles = StyleSheet.create({
   recurrenceBox: {
     backgroundColor: '#C6844F',
     borderRadius: 10,
-    padding: 12,
+    paddingTop: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -373,10 +378,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     paddingVertical: 12,
     borderRadius: 20,
+    width: '45%',
   },
   saveButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+    textAlign: 'center',
   },
 });

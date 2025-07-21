@@ -50,6 +50,7 @@ export default function TabsLayout() {
             backgroundColor: '#FFF8F2',
             elevation: 0,
             shadowOpacity: 0,
+            height: 85,
           },
           headerTitle: '',
           headerRight: () => (
@@ -57,7 +58,7 @@ export default function TabsLayout() {
               onPress={() => console.log('Notification pressed')}
               style={{ marginRight: 16 }}
             >
-              <MaterialCommunityIcons name="bell" size={32} color="#C6844F" />
+              <MaterialCommunityIcons name="bell" size={20} color="#C6844F" />
             </Pressable>
           ),
           tabBarIcon: ({ color }) =>

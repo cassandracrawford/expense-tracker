@@ -31,7 +31,7 @@
     "react-native-paper": "^5.14.5",
     "react-native-pie": "^1.1.2",
     "react-native-pie-chart": "^4.0.1",
-    "react-native-svg": "15.11.2",
+    "react-native-svg": "^15.11.2",
     "react-native-swiper": "^1.6.0",
     "react-native-vector-icons": "^10.2.0",
     "victory": "^37.3.6",
