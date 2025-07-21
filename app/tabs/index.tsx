@@ -38,45 +38,44 @@ export default function Dashboard() {
     Poppins_700Bold
   });
 
-  const [userName, setUserName] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('User');
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
 
   useEffect(() => {
-    const fetchUserNameAndTransactions = async () => {
-      const {
-        data: { user },
-        error: authError
-      } = await supabase.auth.getUser();
+    let isMounted = true;
 
-      if (authError || !user) {
-        console.error('Auth error:', authError?.message || 'No user found');
-        return;
-      }
-
+    const fetchUserData = async () => {
       try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          console.error('❌ Auth error:', authError?.message || 'No user');
+          return;
+        }
+
+        
         const { data, error } = await supabase
           .from('users')
           .select('full_name')
           .eq('id', user.id)
-          .maybeSingle();
+          .maybeSingle() as { data: any; error: import('@supabase/supabase-js').PostgrestError | null };
 
-        let firstName = 'User';
-        if (error) {
-          console.error('Error fetching full_name:', error.message);
-        } else if (!data) {
-          // fallback to metadata, user row not found 
-          const firstName = (user.user_metadata?.full_name || 'User').split(' ')[0];
-          setUserName(firstName);
-          console.warn('⚠️ No user row found, falling back to metadata');
-          firstName = (user.user_metadata?.full_name || 'User').split(' ')[0];
-        } else {
-          firstName = (data.full_name || 'User').split(' ')[0];
+        let name = (data?.full_name || user.user_metadata?.full_name || 'User').split(' ')[0];
+        if (isMounted) {
+          setUserName(name);
+          fetchTransactions(user.id);
         }
 
-        setUserName(firstName);
-        await fetchTransactions(user.id);
+        if (!data) {
+          console.warn('⚠️ No user row found, falling back to metadata');
+        } else if (error) {
+          console.error('❌ Error fetching full_name:', error?.message);
+        }
       } catch (e) {
-        console.error('Unexpected error:', e);
+        console.error('❌ Unexpected error:', e);
       }
     };
 
@@ -89,84 +88,105 @@ export default function Dashboard() {
 
       if (error) {
         console.error('❌ Error fetching transactions:', error.message);
-      } else {
+        return;
+      }
+
+      if (isMounted && data) {
         const mapped = data.map((t) => ({
           ...t,
-          isIncome: t.type === 'income'
+          isIncome: t.type === 'income',
         })) as TransactionItem[];
         setTransactions(mapped);
       }
     };
 
-    fetchUserNameAndTransactions();
+    fetchUserData();
+
+    return () => {
+      isMounted = false; 
+    };
   }, []);
 
-  if (!montserratLoaded || !opensansLoaded || !poppinsLoaded) return null;
+  const fontsLoaded = montserratLoaded && opensansLoaded && poppinsLoaded;
+  if (!fontsLoaded) return null;
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Hello, {userName}!</Text>
 
+      {/* Main Budget Section */}
       <View style={styles.subContainer}>
         <DonutChart percentage={75} />
         <View style={{ flexDirection: 'column', gap: 20 }}>
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <View style={{ flexDirection: 'row' }}>
+            <View style={styles.rowBetween}>
+              <View style={styles.row}>
                 <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
                 <Text style={styles.chartLabel}>Total Budget</Text>
               </View>
               <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$1,000</Text>
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <View style={{ flexDirection: 'row' }}>
+            <View style={styles.rowBetween}>
+              <View style={styles.row}>
                 <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
                 <Text style={styles.chartLabel}>Total Spent</Text>
               </View>
               <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$720</Text>
             </View>
           </View>
-          <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href='/tabs/report'>View Breakdown</Link>
-      <View style={[styles.subContainer, { paddingTop: 30}]}>
+          <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href="/tabs/report">
+            View Breakdown
+          </Link>
+        </View>
+      </View>
+
+      {/* Second Budget Block */}
+      <View style={[styles.subContainer, { paddingTop: 30 }]}>
         <View style={{ flexDirection: 'column', gap: 20 }}>
           <DonutChart percentage={0} />
           <View style={{ flexDirection: 'column', gap: 20 }}>
             <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row' }}>
+              <View style={styles.rowBetween}>
+                <View style={styles.row}>
                   <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
                   <Text style={styles.chartLabel}>Total Budget</Text>
                 </View>
                 <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$0</Text>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row' }}>
+              <View style={styles.rowBetween}>
+                <View style={styles.row}>
                   <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
                   <Text style={styles.chartLabel}>Total Spent</Text>
                 </View>
                 <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$0</Text>
               </View>
             </View>
-            <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href='/tabs/report'>View Breakdown</Link>
+            <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href="/tabs/report">
+              View Breakdown
+            </Link>
           </View>
         </View>
       </View>
 
+      {/* Reminders */}
       <View style={styles.subContainer}>
         <Text style={styles.containerTitle}>Reminders</Text>
         <ReminderCard />
       </View>
 
+      {/* Transactions */}
       <View style={styles.subContainer}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={styles.rowBetween}>
           <Text style={styles.containerTitle}>Recent Transactions</Text>
-          <Link style={styles.linkStyle} href="/tabs/cards">View All</Link>
+          <Link style={styles.linkStyle} href="/tabs/cards">
+            View All
+          </Link>
         </View>
         {transactions.length > 0 ? (
           <TransactionList transactions={transactions} />
-     ) : (
-        <Text style={styles.emptyText}>No transactions available.</Text>
-     )}
+        ) : (
+          <Text style={styles.emptyText}>No transactions available.</Text>
+        )}
       </View>
     </ScrollView>
   );
@@ -187,7 +207,6 @@ const styles = StyleSheet.create({
   subContainer: {
     backgroundColor: '#F5E5DC',
     marginVertical: 8,
-    minHeight: 100,
     borderRadius: 20,
     padding: 20,
   },
@@ -224,5 +243,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
-
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });
