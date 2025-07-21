@@ -19,7 +19,8 @@ import {
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import TransactionList, { DonutChart, ReminderCard } from '../../components/dashboardComponents';
+import { DonutChart, ReminderCard } from '../../components/dashboardComponents';
+import TransactionList, { TransactionItem } from '../../components/TransactionList';
 
 export default function Dashboard() {
   const [montserratLoaded] = useMontserratFonts({
@@ -38,9 +39,10 @@ export default function Dashboard() {
   });
 
   const [userName, setUserName] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
 
   useEffect(() => {
-    const fetchUserName = async () => {
+    const fetchUserNameAndTransactions = async () => {
       const {
         data: { user },
         error: authError
@@ -58,54 +60,70 @@ export default function Dashboard() {
           .eq('id', user.id)
           .maybeSingle();
 
+        let firstName = 'User';
         if (error) {
           console.error('❌ Error fetching full_name:', error.message);
         } else if (!data) {
           console.warn('⚠️ No user row found, falling back to metadata');
-          const firstName = (user.user_metadata?.full_name || 'User').split(' ')[0];
-          setUserName(firstName);
+          firstName = (user.user_metadata?.full_name || 'User').split(' ')[0];
         } else {
-          const firstName = (data.full_name || 'User').split(' ')[0];
-          setUserName(firstName);
+          firstName = (data.full_name || 'User').split(' ')[0];
         }
+
+        setUserName(firstName);
+        await fetchTransactions(user.id);
       } catch (e) {
         console.error('❌ Unexpected error:', e);
       }
     };
 
-    fetchUserName();
+    const fetchTransactions = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching transactions:', error.message);
+      } else {
+        const mapped = data.map((t) => ({
+          ...t,
+          isIncome: t.type === 'income'
+        })) as TransactionItem[];
+        setTransactions(mapped);
+      }
+    };
+
+    fetchUserNameAndTransactions();
   }, []);
 
-  if (!montserratLoaded || !opensansLoaded || !poppinsLoaded) {
-    return null;
-  }
+  if (!montserratLoaded || !opensansLoaded || !poppinsLoaded) return null;
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Hello, {userName}!</Text>
 
       <View style={styles.subContainer}>
+        <DonutChart percentage={75} />
         <View style={{ flexDirection: 'column', gap: 20 }}>
-          <DonutChart percentage={75} />
-          <View style={{ flexDirection: 'column', gap: 20 }}>
-            <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row' }}>
-                  <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
-                  <Text style={styles.chartLabel}>Total Budget</Text>
-                </View>
-                <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$1,000</Text>
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row' }}>
+                <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
+                <Text style={styles.chartLabel}>Total Budget</Text>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row' }}>
-                  <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
-                  <Text style={styles.chartLabel}>Total Spent</Text>
-                </View>
-                <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$720</Text>
-              </View>
+              <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$1,000</Text>
             </View>
-            <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href='/tabs/report'>View Breakdown</Link>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row' }}>
+                <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
+                <Text style={styles.chartLabel}>Total Spent</Text>
+              </View>
+              <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$720</Text>
+            </View>
           </View>
+          <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href='/tabs/report'>View Breakdown</Link>
         </View>
       </View>
 
@@ -115,11 +133,15 @@ export default function Dashboard() {
       </View>
 
       <View style={styles.subContainer}>
-        <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
           <Text style={styles.containerTitle}>Recent Transactions</Text>
-          <Link style={styles.linkStyle} href='/tabs/cards'>View All</Link>
+          <Link style={styles.linkStyle} href="/tabs/cards">View All</Link>
         </View>
-        <TransactionList transactions={[]} />
+        {transactions.length > 0 ? (
+          <TransactionList transactions={transactions} />
+     ) : (
+        <Text style={styles.emptyText}>No transactions available.</Text>
+     )}
       </View>
     </ScrollView>
   );
@@ -170,4 +192,12 @@ const styles = StyleSheet.create({
     height: 24,
     marginRight: 8,
   },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: 'OpenSans_400Regular',
+    color: '#888',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+
 });

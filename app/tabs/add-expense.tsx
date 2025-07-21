@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  KeyboardAvoidingView,
-  SafeAreaView,
-} from 'react-native';
+import {  View,  Text,  TextInput,  TouchableOpacity,  StyleSheet,  Platform,  KeyboardAvoidingView,  SafeAreaView, Alert,} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import { supabase } from '../../lib/supabase';
 
 export default function AddExpenseScreen() {
   const router = useRouter();
@@ -50,6 +42,33 @@ export default function AddExpenseScreen() {
     { label: 'Monthly', value: 'Monthly' },
     { label: 'Yearly', value: 'Yearly' },
   ]);
+
+  const handleSaveExpense = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+  .from('transactions')
+  .insert([{
+    amount: parseFloat(amount),
+    date: date.toISOString(),
+    description,
+    category: categoryValue,
+    payment_method: sourceValue,
+    type: 'expense',
+    is_recurring: true,
+    recurrence_frequency: recurrence,
+    user_id: user?.id, 
+  }]);
+
+  if (error) {
+    console.error('❌ Supabase insert error:', error);
+    Alert.alert('Error', 'Failed to save expense');
+  } else {
+    Alert.alert('✅ Expense saved!', '', [
+      { text: 'OK', onPress: () => router.replace('/tabs') }
+    ]);
+  }
+};
 
   return (
     <SafeAreaView style={styles.scroll}>
@@ -212,7 +231,7 @@ export default function AddExpenseScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveButton}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveExpense}>
             <Text style={styles.saveButtonText}>Save Expense</Text>
           </TouchableOpacity>
         </View>
