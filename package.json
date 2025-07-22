@@ -22,9 +22,22 @@
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-chart-kit": "^6.12.0",
+<<<<<<< Updated upstream
     "react-native-pie": "^1.1.2",
     "react-native-pie-chart": "^4.0.1",
     "react-native-svg": "15.11.2",
+=======
+    "react-native-dotenv": "^3.4.11",
+    "react-native-dropdown-picker": "^5.4.6",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-paper": "^5.14.5",
+    "react-native-pie": "^1.1.2",
+    "react-native-pie-chart": "^4.0.1",
+    "react-native-svg": "^15.11.2",
+    "react-native-swipe-list-view": "^3.2.9",
+    "react-native-swiper": "^1.6.0",
+    "react-native-vector-icons": "^10.2.0",
+>>>>>>> Stashed changes
     "victory": "^37.3.6",
     "victory-native": "^41.17.4"
   },

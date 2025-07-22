@@ -14,6 +14,7 @@ export default function Dashboard() {
         return null;
     }
 
+<<<<<<< Updated upstream
     return (
         <ScrollView style={styles.container}>
             {/* Change Name - depending on user's name */}
@@ -62,6 +63,129 @@ export default function Dashboard() {
             </View>
         </ScrollView>
     );
+=======
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchUserData = async () => {
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          console.error('❌ Auth error:', authError?.message || 'No user');
+          return;
+        }
+
+        
+        const { data, error } = await supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle() as { data: any; error: import('@supabase/supabase-js').PostgrestError | null };
+
+        let name = (data?.full_name || user.user_metadata?.full_name || 'User').split(' ')[0];
+        if (isMounted) {
+          setUserName(name);
+          fetchTransactions(user.id);
+        }
+
+        if (!data) {
+          console.warn('⚠️ No user row found, falling back to metadata');
+        } else if (error) {
+          console.error('❌ Error fetching full_name:', error?.message);
+        }
+      } catch (e) {
+        console.error('❌ Unexpected error:', e);
+      }
+    };
+
+    const fetchTransactions = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching transactions:', error.message);
+        return;
+      }
+
+      if (isMounted && data) {
+        const mapped = data.map((t) => ({
+          ...t,
+          isIncome: t.type === 'income',
+        })) as TransactionItem[];
+        setTransactions(mapped);
+      }
+    };
+
+    fetchUserData();
+
+    return () => {
+      isMounted = false; 
+    };
+  }, []);
+
+  const fontsLoaded = montserratLoaded && opensansLoaded && poppinsLoaded;
+  if (!fontsLoaded) return null;
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Hello, {userName}!</Text>
+
+      {/* Main Budget Section */}
+      <View style={styles.subContainer}>
+        <DonutChart percentage={75} />
+        <View style={{ flexDirection: 'column', gap: 20 }}>
+          <View>
+            <View style={styles.rowBetween}>
+              <View style={styles.row}>
+                <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
+                <Text style={styles.chartLabel}>Total Budget</Text>
+              </View>
+              <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$1,000</Text>
+            </View>
+            <View style={styles.rowBetween}>
+              <View style={styles.row}>
+                <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
+                <Text style={styles.chartLabel}>Total Spent</Text>
+              </View>
+              <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$720</Text>
+            </View>
+          </View>
+          <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href="/tabs/report">
+            View Breakdown
+          </Link>
+        </View>
+      </View>
+
+      {/* Reminders */}
+      <View style={styles.subContainer}>
+        <Text style={styles.containerTitle}>Reminders</Text>
+        <ReminderCard />
+      </View>
+
+      {/* Transactions */}
+      <View style={styles.subContainer}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.containerTitle}>Recent Transactions</Text>
+          <Link style={styles.linkStyle} href="/tabs/cards">
+            View All
+          </Link>
+        </View>
+        {transactions.length > 0 ? (
+          <TransactionList transactions={transactions} />
+        ) : (
+          <Text style={styles.emptyText}>No transactions available.</Text>
+        )}
+      </View>
+    </ScrollView>
+  );
+>>>>>>> Stashed changes
 }
 
 const styles = StyleSheet.create({

@@ -16,6 +16,99 @@ export default function RegisterScreen() {
         return null;
     }
 
+    if (!trimmedName || !trimmedEmail || !trimmedPassword || !trimmedConfirmPassword) {
+      Alert.alert('Missing Info', 'Please fill in all fields.');
+      return;
+    }
+
+    if (trimmedPassword !== trimmedConfirmPassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: trimmedPassword,
+        options: {
+          emailRedirectTo: 'expense-tracker://auth/callback',
+          data: {
+            full_name: trimmedName, 
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Sign Up Error:', error.message);
+        Alert.alert('Registration Error', error.message);
+        return;
+      }
+
+      
+      const userId = data.user?.id;
+      if (userId) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({ 
+            id: userId, 
+            full_name: trimmedName,
+            email: trimmedEmail, });
+
+        if (insertError) {
+          console.error('Error inserting into users table:', insertError.message);
+        }
+      }
+
+      Alert.alert(
+        'Success!',
+        'Check your email to confirm your account.',
+        [{ text: 'OK', onPress: () => router.replace('/tabs') }]
+      );
+    } catch (err: any) {
+      console.error('Unexpected Error:', err);
+      Alert.alert('Error', 'Something went wrong during registration.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={{ marginBottom: 50 }}>
+        <Text style={styles.title}>Create</Text>
+        <Text style={styles.title}>Account.</Text>
+      </View>
+
+      <View style={{ gap: 15, marginBottom: 50 }}>
+        <LoginForm inputLabel="Name" iconName="user" placeholderText="Your Name" isPassword={false} value={name} onChangeText={setName} />
+        <LoginForm inputLabel="Email" iconName="envelope" placeholderText="youremail@gmail.com" isPassword={false} value={email} onChangeText={setEmail} />
+        <LoginForm inputLabel="Password" iconName="lock" placeholderText="*************" isPassword={true} value={password} onChangeText={setPassword} />
+        <LoginForm inputLabel="Confirm Password" iconName="lock" placeholderText="*************" isPassword={true} value={confirmPassword} onChangeText={setConfirmPassword} />
+      </View>
+
+      <LoginButton
+        buttonLabel={isSubmitting ? 'Signing up...' : 'Sign up'}
+        style={{ backgroundColor: '#C6844F', opacity: isSubmitting ? 0.6 : 1 }}
+        textStyle={{ color: '#FFFFFF', fontFamily: 'Montserrat_700Bold' }}
+        onPress={handleRegister}
+      />
+
+      <View style={styles.separator}>
+        <View style={styles.line} />
+        <Text style={styles.text}>or</Text>
+        <View style={styles.line} />
+      </View>
+
+      <LoginButton
+        buttonLabel="Login"
+        style={{ borderWidth: 2, borderColor: '#C6844F' }}
+        textStyle={{ color: '#C6844F', fontFamily: 'Montserrat_700Bold' }}
+        onPress={() => router.push('./login')}
+      />
+    </View>
+  );
     return(
         <View style={styles.container}>
             <View style={{marginBottom: 50}}>

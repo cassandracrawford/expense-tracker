@@ -13,7 +13,71 @@ export default function AddIncomeScreen() {
         return null;
     }
 
+<<<<<<< Updated upstream
     return (
+=======
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [sourceValue, setSourceValue] = useState(null);
+  const [sourceItems, setSourceItems] = useState([
+    { label: 'Cash', value: 'Cash' },
+    { label: 'Bank Transfer', value: 'Bank Transfer' },
+    { label: 'PayPal', value: 'PayPal' },
+    { label: 'Cheque', value: 'Cheque' },
+    { label: 'Employer', value: 'Employer' },
+  ]);
+
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+  const [recurrenceItems, setRecurrenceItems] = useState([
+    { label: 'Weekly', value: 'Weekly' },
+    { label: 'Bi-Weekly', value: 'Bi-Weekly' },
+    { label: 'Semi-Monthly', value: 'Semi-Monthly' },
+    { label: 'Monthly', value: 'Monthly' },
+    { label: 'Yearly', value: 'Yearly' },
+  ]);
+const handleSaveIncome = async () => {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(); 
+
+  if (userError || !user) {
+    console.error('User fetch error:', userError);
+    Alert.alert('Error', 'Failed to fetch user data');
+    return;
+  }
+
+  const { error } = await supabase
+    .from('transactions')
+    .insert([{
+      amount: parseFloat(amount),
+      date: date.toISOString(),
+      description,
+      category: categoryValue,
+      payment_method: sourceValue,
+      type: 'income',
+      is_recurring: true,
+      recurrence_frequency: recurrence,
+      user_id: user.id, 
+    }]);
+
+  if (error) {
+    console.error('Supabase insert error:', error);
+    Alert.alert('Error', 'Failed to save income');
+  } else {
+    Alert.alert('Income saved!', '', [
+      { text: 'OK', onPress: () => router.replace('/tabs') }
+    ]);
+  }
+};
+
+
+  return (
+    <SafeAreaView style={styles.scroll}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+>>>>>>> Stashed changes
         <View style={styles.container}>
             <Text>Add Income</Text>
         </View>
