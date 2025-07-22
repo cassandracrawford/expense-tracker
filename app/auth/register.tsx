@@ -5,11 +5,13 @@ import { useRouter } from 'expo-router';
 import LoginButton from '../../components/loginButton';
 import LoginForm from '../../components/loginForm';
 import { useState } from 'react';
+import * as Linking from 'expo-linking'
 import supabase from '../../lib/supabase';
 
 export default function RegisterScreen() {
   const [montserratLoaded] = useMontserratFonts({ Montserrat_400Regular, Montserrat_700Bold });
   const [opensansLoaded] = useOpenSansFonts({ OpenSans_400Regular, OpenSans_700Bold });
+  const redirectUrl = Linking.createURL('/auth/callback');
 
   const router = useRouter();
 
@@ -49,47 +51,52 @@ export default function RegisterScreen() {
 
     setIsSubmitting(true);
 
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: trimmedEmail,
-        password: trimmedPassword,
-        options: {
-          emailRedirectTo: 'expense-tracker://auth/callback',
-          data: {
-            full_name: trimmedName, 
-          },
-        },
-      });
+try {
+  const { data, error } = await supabase.auth.signUp({
+    email: trimmedEmail,
+    password: trimmedPassword,
+    options: {
+      emailRedirectTo: redirectUrl,
+      data: {
+        full_name: trimmedName,
+      },
+    },
+  });
 
-      if (error) {
-        console.error('Sign Up Error:', error.message);
-        Alert.alert('Registration Error', error.message);
-        return;
-      }
+  if (error) {
+    console.error('Sign Up Error:', error.message);
+    Alert.alert('Registration Error', error.message);
+    return;
+  }
 
-      
-      const userId = data.user?.id;
-      if (userId) {
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({ id: userId, full_name: trimmedName, email: trimmedEmail, });
+  const userId = data.user?.id;
+  if (userId) {
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert({ id: userId, full_name: trimmedName, email: trimmedEmail, });
 
-        if (insertError) {
-          console.error('Error inserting into users table:', insertError.message);
-        }
-      }
-
-      Alert.alert(
-        'Success!',
-        'Check your email to confirm your account.',
-        [{ text: 'OK', onPress: () => router.replace('/tabs') }]
-      );
-    } catch (err: any) {
-      console.error('Unexpected Error:', err);
-      Alert.alert('Error', 'Something went wrong during registration.');
-    } finally {
-      setIsSubmitting(false);
+    if (insertError) {
+      console.error('Error inserting into users table:', insertError.message);
     }
+  }
+
+  Alert.alert(
+    'Success!',
+    'Check your email to confirm your account.',
+    [{ text: 'OK', onPress: () => { 
+      setName('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+     } }]
+    );
+
+} catch (err: any) {
+  console.error('Unexpected Error:', err);
+  Alert.alert('Error', 'Something went wrong during registration.');
+} finally {
+  setIsSubmitting(false);
+}
   };
 
   return (

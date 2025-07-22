@@ -30,7 +30,7 @@ export default function LoginScreen() {
     } else {
       // debug
       const sessionResult = await supabase.auth.getSession();
-      console.log('🟢 Session after login:', sessionResult.data.session);
+      console.log('Session after login:', sessionResult.data.session);
 
       if (!sessionResult.data.session) {
         Alert.alert('Warning', 'Login successful but no session detected.');
