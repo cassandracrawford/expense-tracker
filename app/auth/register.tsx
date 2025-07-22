@@ -72,7 +72,7 @@ export default function RegisterScreen() {
       if (userId) {
         const { error: insertError } = await supabase
           .from('users')
-          .insert({ id: userId, full_name: trimmedName });
+          .insert({ id: userId, full_name: trimmedName, email: trimmedEmail, });
 
         if (insertError) {
           console.error('Error inserting into users table:', insertError.message);

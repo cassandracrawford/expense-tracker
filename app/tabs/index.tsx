@@ -115,32 +115,6 @@ export default function Dashboard() {
       <Text style={styles.title}>Hello, {userName}!</Text>
 
       {/* Main Budget Section */}
-      <View style={styles.subContainer}>
-        <DonutChart percentage={75} />
-        <View style={{ flexDirection: 'column', gap: 20 }}>
-          <View>
-            <View style={styles.rowBetween}>
-              <View style={styles.row}>
-                <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
-                <Text style={styles.chartLabel}>Total Budget</Text>
-              </View>
-              <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$1,000</Text>
-            </View>
-            <View style={styles.rowBetween}>
-              <View style={styles.row}>
-                <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
-                <Text style={styles.chartLabel}>Total Spent</Text>
-              </View>
-              <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$720</Text>
-            </View>
-          </View>
-          <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href="/tabs/report">
-            View Breakdown
-          </Link>
-        </View>
-      </View>
-
-      {/* Second Budget Block */}
       <View style={[styles.subContainer, { paddingTop: 30 }]}>
         <View style={{ flexDirection: 'column', gap: 20 }}>
           <DonutChart percentage={0} />

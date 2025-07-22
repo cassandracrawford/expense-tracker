@@ -82,7 +82,7 @@ export default function AddExpenseScreen() {
 };
 
   return (
-    <ScrollView style={styles.scroll}>
+    <SafeAreaView style={styles.scroll}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -247,7 +247,7 @@ export default function AddExpenseScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 

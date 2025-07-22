@@ -1,16 +1,105 @@
-import { Pressable, ScrollView, StyleSheet, Text, View, Switch } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, Switch, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium } from '@expo-google-fonts/montserrat';
 import { useFonts as useOpenSansFonts, OpenSans_400Regular, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
 import { useRouter } from 'expo-router';
 import supabase from '@/lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DropDownPicker from 'react-native-dropdown-picker';
+import EditProfile from '@/components/editProfile';
 
 export default function SettingsScreen() {
+    const router = useRouter();
+
+    //  Fonts
     const [montserratLoaded] = useMontserratFonts({Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium});
     const [opensansLoaded] = useOpenSansFonts({OpenSans_400Regular, OpenSans_700Bold});
+   
+    //  To display fullname and email
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState(''); 
+    const [modalProfileVisible, setModalProfileVisible] = useState(false);
 
+    const fetchUserDetails = async () => {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        console.error('Auth error:', authError?.message);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user info:', error.message);
+      } else if (data) {
+        setFullName(data.full_name);
+        setEmail(data.email);
+      }
+    };
+
+    useEffect(() => {
+     fetchUserDetails();
+    }, []);
+
+    // edit profile
+    const handleSaveProfile = async (updatedName: string, updatedEmail: string) => {
+      try {
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        console.error('Auth error:', authError?.message);
+        Alert.alert('Error', 'Unable to identify the user.');
+        return;
+      }
+
+      const safeName = updatedName?.trim() ?? '';
+      const safeEmail = updatedEmail?.trim()?.toLowerCase() ?? '';
+
+      const { error: emailUpdateError } = await supabase.auth.updateUser({
+        email: safeEmail,
+      });
+
+      if (emailUpdateError) {
+        console.error('Email update error:', emailUpdateError.message);
+        Alert.alert('Error', 'Failed to update email.');
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          full_name: safeName,
+          email: safeEmail,
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Update error:', updateError.message);
+        Alert.alert('Error', 'Failed to save changes.');
+        return;
+      }
+
+      Alert.alert('Success', 'Profile updated successfully!');
+      setModalProfileVisible(false); // Close the modal
+      fetchUserDetails();
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      Alert.alert('Error', 'Something went wrong while saving your profile.');
+      }
+    };
+    
     const [dailyEnabled, setDailyEnabled] = useState(false);
     const [weeklyEnabled, setWeeklyEnabled] = useState(false);
     const [monthlyEnabled, setMonthlyEnabled] = useState(false);
@@ -31,12 +120,8 @@ export default function SettingsScreen() {
       { label: 'Spanish', value: 'spanish' },
     ]);
 
-    const router = useRouter();
 
-    if (!montserratLoaded || !opensansLoaded) {
-        return null;
-    }
-
+    // Logout
     const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
 
@@ -47,6 +132,11 @@ export default function SettingsScreen() {
 
     router.replace('/auth/login'); 
     };
+
+    //  Load Fonts
+    if (!montserratLoaded || !opensansLoaded) {
+        return null;
+    }
 
     return (
         <ScrollView style={styles.container}>
@@ -72,21 +162,35 @@ export default function SettingsScreen() {
                 </View>
                 <View style={{ justifyContent: 'space-between', flex: 1}}>
                   <View>
-                    <Text style={[styles.containerTitle, { paddingTop: 15, lineHeight:20}]}>Ameera Callahan</Text>
-                    <Text style={styles.cardSubText}>ameera.callahan@example.com</Text>
+                    <Text style={[styles.containerTitle, { paddingTop: 15, lineHeight:20}]}>
+                      {fullName}
+                    </Text>
+                    <Text style={styles.cardSubText}>
+                      {email}
+                    </Text>
                   </View>
-                  <View style={{ 
+                  <Pressable
+                   style={{ 
                     flexDirection: 'row',
                     justifyContent: 'flex-end', 
                     gap: 5,
-                  }}>
-                    <Text style={[styles.cardText, { textDecorationLine: 'underline'}]}>Edit Profile</Text>
-                    <MaterialCommunityIcons 
-                      name="pencil-outline"
-                      size={16} 
-                      color={'#5C4630'}
-                    />
-                  </View>
+                    }}
+                    onPress={() => setModalProfileVisible(true)}>
+                      <Text style={[styles.cardText, { textDecorationLine: 'underline'}]}>Edit Profile</Text>
+
+                      <MaterialCommunityIcons 
+                        name="pencil-outline"
+                        size={16} 
+                        color={'#5C4630'}
+                      />
+                  </Pressable>
+                  <EditProfile 
+                    visible={modalProfileVisible} 
+                    onClose={() => setModalProfileVisible(false)}
+                    currentFullName={fullName}
+                    currentEmail={email}
+                    onSave={handleSaveProfile}
+                  />
                 </View>
               </View>
             </View>
