@@ -1,12 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, Alert } from 'react-native';
+import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useFonts as useCodystarFonts, Codystar_400Regular } from '@expo-google-fonts/codystar';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import LoginButton from '../components/loginButton';
 import { useRouter } from 'expo-router';
 import supabase from '../lib/supabase';
-
-
+import { useEffect } from 'react';
 
 export default function App() {
   const [codystarLoaded] = useCodystarFonts({ Codystar_400Regular });
@@ -14,19 +13,55 @@ export default function App() {
 
   const router = useRouter();
 
-  if (!codystarLoaded || !montserratLoaded) {
-    return null;
-  }
+  useEffect(() => {
+    const ensureUserRowExists = async () => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const user = authData?.user;
 
-  const handleTestConnection = async () => {
-    const { data, error } = await supabase.from('users').select('*').limit(1);
-    if (error) {
-      Alert.alert('❌ Supabase Error', error.message);
-    } else {
-      Alert.alert('✅ Supabase Connected', `Pulled ${data.length} user(s)`);
-      console.log(data);
-    }
-  };
+      if (!user) {
+        console.warn('⚠️ No auth user found.');
+        return;
+      }
+
+      const { id, email, user_metadata } = user;
+      const fullName = user_metadata?.full_name || 'User';
+
+      // 查是否已存在
+      const { data: existing, error: fetchError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('❌ Failed to check users table:', fetchError.message);
+        return;
+      }
+
+      if (!existing) {
+        console.log('🚧 No user row found, inserting...');
+        const { error: insertError } = await supabase.from('users').insert([{
+          id,
+          full_name: fullName,
+          email,
+          currency: 'USD',
+          language: 'en'
+        }]);
+
+        if (insertError) {
+          console.error('❌ Failed to insert user row:', insertError.message);
+        } else {
+          console.log('✅ User row inserted successfully');
+        }
+      } else {
+        console.log('✅ User row already exists');
+      }
+    };
+
+    ensureUserRowExists();
+  }, []);
+
+  if (!codystarLoaded || !montserratLoaded) return null;
 
   return (
     <View style={styles.container}>
@@ -36,7 +71,7 @@ export default function App() {
         <Text style={styles.title}>Penny</Text>
         <Text style={styles.title}>Planner</Text>
         <Text style={[styles.subtitle, { marginBottom: 100 }]}>Track your money to the last penny.</Text>
-        
+
         <LoginButton
           buttonLabel="Login"
           style={{ backgroundColor: '#C6844F' }}
@@ -49,11 +84,6 @@ export default function App() {
           textStyle={{ color: '#C6844F', fontFamily: 'Montserrat_700Bold' }}
           onPress={() => router.push('/auth/register')}
         />
-
-        {/* ✅ Supabase connection test */}
-        {/* <View style={{ marginTop: 40 }}>
-          <Button title="Test Supabase Connection" onPress={handleTestConnection} />
-        </View> */}
       </View>
     </View>
   );

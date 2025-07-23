@@ -17,7 +17,8 @@ import {
   Poppins_700Bold
 } from '@expo-google-fonts/poppins';
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import supabase from '../../lib/supabase';
 import { DonutChart, ReminderCard } from '../../components/dashboardComponents';
 import TransactionList, { TransactionItem } from '../../components/TransactionList';
@@ -41,71 +42,113 @@ export default function Dashboard() {
   const [userName, setUserName] = useState<string>('User');
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
+  // calculate total income, expense and percentage
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((acc, t) => acc + (t.amount || 0), 0);
+  const totalExpense = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => acc + (t.amount || 0), 0);
+  const percentage = totalIncome + totalExpense === 0 ? 0 : totalExpense / (totalIncome + totalExpense);
 
-    const fetchUserData = async () => {
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+  const ensureUserRowExists = async (user: any) => {
+    const { id, email, user_metadata } = user;
+    const fullName = user_metadata?.full_name || 'User';
 
-        if (authError || !user) {
-          console.error('❌ Auth error:', authError?.message || 'No user');
-          return;
-        }
+    const { data: existing, error: fetchError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
 
-        
-        const { data, error } = await supabase
-          .from('users')
-          .select('full_name')
-          .eq('id', user.id)
-          .maybeSingle() as { data: any; error: import('@supabase/supabase-js').PostgrestError | null };
+    if (fetchError) {
+      console.error('❌ Failed to check users table:', fetchError.message);
+      return;
+    }
 
-        let name = (data?.full_name || user.user_metadata?.full_name || 'User').split(' ')[0];
-        if (isMounted) {
-          setUserName(name);
-          fetchTransactions(user.id);
-        }
+    if (!existing) {
+      console.log('🚧 No user row found, inserting...');
+      const { error: insertError } = await supabase.from('users').insert([{
+        id,
+        full_name: fullName,
+        email,
+        currency: 'USD',
+        language: 'en'
+      }]);
 
-        if (!data) {
-          console.warn('⚠️ No user row found, falling back to metadata');
-        } else if (error) {
-          console.error('❌ Error fetching full_name:', error?.message);
-        }
-      } catch (e) {
-        console.error('❌ Unexpected error:', e);
+      if (insertError) {
+        console.error('❌ Failed to insert user row:', insertError.message);
+      } else {
+        console.log('✅ User row inserted successfully');
       }
-    };
+    } else {
+      console.log('✅ User row already exists');
+    }
+  };
 
-    const fetchTransactions = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
+  const fetchTransactions = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching transactions:', error.message);
+    if (error) {
+      console.error('❌ Error fetching transactions:', error.message);
+      return;
+    }
+
+    const mapped = data.map((t) => ({
+      ...t,
+      isIncome: t.type === 'income',
+    })) as TransactionItem[];
+
+    setTransactions(mapped);
+  };
+
+  const fetchUserData = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        console.error('❌ Auth error:', authError?.message || 'No user');
         return;
       }
 
-      if (isMounted && data) {
-        const mapped = data.map((t) => ({
-          ...t,
-          isIncome: t.type === 'income',
-        })) as TransactionItem[];
-        setTransactions(mapped);
+      await ensureUserRowExists(user);
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle() as { data: any; error: import('@supabase/supabase-js').PostgrestError | null };
+
+      const name = (data?.full_name || user.user_metadata?.full_name || 'User').split(' ')[0];
+      setUserName(name);
+      fetchTransactions(user.id);
+
+      if (!data) {
+        console.warn('⚠️ No user row found, falling back to metadata');
+      } else if (error) {
+        console.error('❌ Error fetching full_name:', error?.message);
       }
-    };
-
-    fetchUserData();
-
-    return () => {
-      isMounted = false; 
-    };
+    } catch (e) {
+      console.error('❌ Unexpected error:', e);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserData();
+    }, [])
+  );
 
   const fontsLoaded = montserratLoaded && opensansLoaded && poppinsLoaded;
   if (!fontsLoaded) return null;
@@ -117,7 +160,7 @@ export default function Dashboard() {
       {/* Main Budget Section */}
       <View style={[styles.subContainer, { paddingTop: 30 }]}>
         <View style={{ flexDirection: 'column', gap: 20 }}>
-          <DonutChart percentage={0} />
+          <DonutChart percentage={percentage} />
           <View style={{ flexDirection: 'column', gap: 20 }}>
             <View>
               <View style={styles.rowBetween}>
@@ -125,14 +168,14 @@ export default function Dashboard() {
                   <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
                   <Text style={styles.chartLabel}>Total Budget</Text>
                 </View>
-                <Text style={[styles.chartAmount, { color: '#B6A089' }]}>$0</Text>
+                <Text style={[styles.chartAmount, { color: '#B6A089' }]}>${totalIncome}</Text>
               </View>
               <View style={styles.rowBetween}>
                 <View style={styles.row}>
                   <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
                   <Text style={styles.chartLabel}>Total Spent</Text>
                 </View>
-                <Text style={[styles.chartAmount, { color: '#5C4630' }]}>$0</Text>
+                <Text style={[styles.chartAmount, { color: '#5C4630' }]}>${totalExpense}</Text>
               </View>
             </View>
             <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href="/tabs/report">

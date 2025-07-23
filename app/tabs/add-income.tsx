@@ -46,16 +46,15 @@ export default function AddIncomeScreen() {
     { label: 'Yearly', value: 'Yearly' },
   ]);
 const handleSaveIncome = async () => {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser(); 
+  const { data, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !user) {
+  if (userError || !data?.user) {
     console.error('❌ User fetch error:', userError);
     Alert.alert('Error', 'Failed to fetch user data');
     return;
   }
+
+  const userId = data.user.id;
 
   const { error } = await supabase
     .from('transactions')
@@ -68,7 +67,7 @@ const handleSaveIncome = async () => {
       type: 'income',
       is_recurring: true,
       recurrence_frequency: recurrence,
-      user_id: user.id, 
+      user_id: userId, // ✅ 正確的 user id
     }]);
 
   if (error) {

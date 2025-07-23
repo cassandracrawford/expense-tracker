@@ -1,5 +1,5 @@
-import { Text, View, StyleSheet, Dimensions} from 'react-native';
-import { useFonts as useMontserratFonts, Montserrat_400Regular,Montserrat_500Medium, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
+import { Text, View, StyleSheet, Dimensions } from 'react-native';
+import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { G, Circle } from 'react-native-svg';
 
@@ -18,43 +18,49 @@ interface TransactionsProps {
 
 const screenWidth = Dimensions.get('window').width;
 
-export default function TransactionList({transactions} : TransactionsProps) {
-    const [montserratLoaded] = useMontserratFonts({Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold });
-    
-    if (!montserratLoaded) {
-      return null;
-    }
-      
-    return (
-      <>
-        {transactions.length === 0 ? (
-          <View style={{padding: 15}}>
-            <Text style={styles.transactionsTitle}>No Recent Transactions</Text>
-            <Text style={styles.transactionsSubtitle}>Your recent transactions will show here.</Text>
-          </View>
-        ) :(
-          transactions.map((item: TransactionItem) => (
-            <View key={item.id} style={styles.transactionsRow}>
-              <MaterialCommunityIcons 
-                name={item.icon as keyof typeof MaterialCommunityIcons.glyphMap}
-                size={24}
-                color="#5C4630"
-                style={{marginRight: 10}}
-              />
-              <View style={{flex: 1}}>
-                <Text style={styles.transactionsTitle}>{item.type}</Text>
-                <Text style={styles.transactionsSubtitle}>{item.date}</Text>
-              </View>
-              <Text style={styles.amountStyle}>{item.isIncome ? '+' : '-'} ${item.amount.toFixed(2)}</Text>
+export default function TransactionList({ transactions }: TransactionsProps) {
+  const [montserratLoaded] = useMontserratFonts({
+    Montserrat_400Regular,
+    Montserrat_500Medium,
+    Montserrat_700Bold,
+  });
+
+  if (!montserratLoaded) {
+    return null;
+  }
+
+  return (
+    <>
+      {transactions.length === 0 ? (
+        <View style={{ padding: 15 }}>
+          <Text style={styles.transactionsTitle}>No Recent Transactions</Text>
+          <Text style={styles.transactionsSubtitle}>Your recent transactions will show here.</Text>
+        </View>
+      ) : (
+        transactions.map((item: TransactionItem) => (
+          <View key={item.id} style={styles.transactionsRow}>
+            <MaterialCommunityIcons
+              name={item.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+              size={24}
+              color="#5C4630"
+              style={{ marginRight: 10 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.transactionsTitle}>{item.type}</Text>
+              <Text style={styles.transactionsSubtitle}>{item.date}</Text>
             </View>
-          ))
-        )}
-      </>
-    );
+            <Text style={styles.amountStyle}>
+              {item.isIncome ? '+' : '-'} ${item.amount.toFixed(2)}
+            </Text>
+          </View>
+        ))
+      )}
+    </>
+  );
 }
 
 export function ReminderCard() {
-  return(
+  return (
     <View style={styles.cardReminders}>
       <Text style={styles.remindersTextTitle}>No Reminders</Text>
       <Text style={styles.remindersSubTitle}>Due Today</Text>
@@ -63,48 +69,43 @@ export function ReminderCard() {
 }
 
 export function DonutChart({
-  percentage = 0,
+  percentage = 0, // 0 ~ 1 (e.g., 0.4 = 40%)
   size = 250,
   strokeWidth = 60,
   colorDark = '#5A4532',
   colorLight = '#B7A690',
-  }) {
+}) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const darkPercent = percentage;
-  const lightPercent = 100 - darkPercent;
+  const percent = Math.min(Math.max(percentage, 0), 1) * 100;
+  const darkLength = (percent / 100) * circumference;
+  const lightLength = circumference - darkLength;
 
   return (
-    <View
-      style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
-      }}
-    >
+    <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
       <Svg width={size} height={size}>
         <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
-          {/* Dark portion */}
+          {/* Dark portion (spent) */}
           <Circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
             stroke={colorDark}
             strokeWidth={strokeWidth}
-            strokeDasharray={`${(darkPercent / 100) * circumference}, ${circumference}`}
+            strokeDasharray={`${darkLength}, ${circumference}`}
             strokeLinecap="butt"
             fill="none"
           />
-          {/* Light portion */}
+          {/* Light portion (remaining) */}
           <Circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
             stroke={colorLight}
             strokeWidth={strokeWidth}
-            strokeDasharray={`${(lightPercent / 100) * circumference}, ${circumference}`}
-            strokeDashoffset={(darkPercent / 100) * circumference * -1}
+            strokeDasharray={`${lightLength}, ${circumference}`}
+            strokeDashoffset={-darkLength}
             strokeLinecap="butt"
             fill="none"
           />
@@ -136,12 +137,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5C4630',
   },
-    cardReminders: {
+  cardReminders: {
     height: 75,
     backgroundColor: '#FFFFFF',
     marginTop: 10,
     borderRadius: 10,
-    padding:  15,
+    padding: 15,
     justifyContent: 'center',
   },
   remindersTextTitle: {
