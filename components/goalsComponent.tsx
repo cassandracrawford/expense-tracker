@@ -1,6 +1,8 @@
 import { StyleSheet, View, Text, Pressable } from "react-native";
 import { useFonts as useMontserratFonts, Montserrat_400Regular,Montserrat_500Medium, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useState } from "react";
+import AddSavingsModal from "./addAmountModal";
  
 type prop = {
     goalTitle: string;
@@ -22,6 +24,8 @@ export default function GoalsCard({ goalTitle, targetDate } : prop) {
     const timeValue = 2;
     const timeUnit = 'months';
     const amountNeeded = 50;
+
+    const [modalAddSavingsVisible, setModalAddSavingsVisible] = useState(false);
 
     if (!montserratLoaded) {
       return null;
@@ -95,13 +99,15 @@ export default function GoalsCard({ goalTitle, targetDate } : prop) {
                 </View>
             </View>
             
-            <Pressable style={styles.addSavings}>
+            <Pressable style={styles.addSavings} onPress={() => setModalAddSavingsVisible(true)}>
                 <Text style={{
                     fontFamily: 'Montserrat_700Bold',
                     color: '#FFFFFF',
                     fontSize: 12,
                 }}>+ add savings</Text>
             </Pressable>
+
+            <AddSavingsModal visible={modalAddSavingsVisible} onClose={() => setModalAddSavingsVisible(false)} />
         </View>
 
     );

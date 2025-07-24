@@ -6,6 +6,7 @@ import { useState } from 'react';
 import BudgetCard from '../../components/budgetComponent';
 import GoalsCard from '@/components/goalsComponent';
 import BudgetModal from '@/components/addBudgetModal';
+import SavingsModal from '@/components/addSavingsModal';
 
 export default function GoalScreen() {
     const [montserratLoaded] = useMontserratFonts({Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium});
@@ -22,6 +23,7 @@ export default function GoalScreen() {
     const savingsProgress = totalSavingsGoal > 0 ? Math.min(totalSavings /totalSavingsGoal, 1) : 0;
 
     const [modalBudgetVisible, setModalBudgetVisible] = useState(false);
+    const [modalSavingsVisible, setModalSavingsVisible] = useState(false);
 
     const activeGoals = 4;
 
@@ -110,9 +112,11 @@ export default function GoalScreen() {
 
             {/* Savings Goals */}
             <View style={{position: 'relative'}}>
-              <Pressable style={styles.fab}>
+              <Pressable style={styles.fab} onPress={() => setModalSavingsVisible(true)}>
                 <Text style={styles.fabText}>+ Add Goal</Text>
               </Pressable>
+
+              <SavingsModal visible={modalSavingsVisible} onClose={() => setModalSavingsVisible(false)} />
               <View style={styles.subContainer}>
                 <Text style={styles.containerTitle}>Savings Goals</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
