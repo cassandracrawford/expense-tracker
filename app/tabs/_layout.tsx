@@ -4,6 +4,7 @@ import { TouchableOpacity, StyleSheet, View, Pressable, Text } from 'react-nativ
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { useEffect, useState } from 'react';
 import * as Linking from 'expo-linking';
+import NotificationPanel from '@/components/notificationModal';
 
 export default function TabsLayout() {
   const [showOverlay, setShowOverlay] = useState(false);
@@ -12,10 +13,12 @@ export default function TabsLayout() {
     Montserrat_700Bold
   });
 
+  const [isNotifVisible, setNotifVisible] = useState(false);
+
   useEffect(() => {
     const sub = Linking.addEventListener('url', ({ url }) => {
       if (url.includes('auth/callback')) {
-        console.log('✅ Auth callback received:', url);
+        console.log('Auth callback received:', url);
         router.replace('/tabs');
       }
     });
@@ -55,7 +58,7 @@ export default function TabsLayout() {
           headerTitle: '',
           headerRight: () => (
             <Pressable
-              onPress={() => console.log('Notification pressed')}
+              onPress={() => setNotifVisible(true)}
               style={{ marginRight: 16 }}
             >
               <MaterialCommunityIcons name="bell" size={20} color="#C6844F" />
@@ -95,6 +98,12 @@ export default function TabsLayout() {
         <Tabs.Screen name="add-income" options={{ href: null }} />
         <Tabs.Screen name="add-expense" options={{ href: null }} />
       </Tabs>
+      
+      {/* Notification Component */}
+      <NotificationPanel
+        isVisible={isNotifVisible}
+        onClose={() => setNotifVisible(false)}
+      />
 
       {showOverlay && (
         <>
