@@ -50,18 +50,31 @@ export function useUserGoalData(): GoalData {
     const totalSpent = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
     setTotalSpent(totalSpent);
 
-    // Fetch goals
-    const { data: goals } = await supabase
+    // Fetch goals + savings using join
+    const { data: goals, error } = await supabase
       .from('goals')
-      .select('*')
+      .select('id, name, target_amount, target_date, savings(amount)')
       .eq('user_id', userId);
 
-    const totalSavings = goals?.reduce((sum, g) => sum + (g.start_amount || 0), 0) || 0;
-    const totalSavingsGoal = goals?.reduce((sum, g) => sum + (g.target_amount || 0), 0) || 0;
+    if (error) {
+      console.error(' Error fetching goals with savings:', error.message);
+      return;
+    }
+
+    const enrichedGoals: GoalItem[] = (goals || []).map((goal: any) => ({
+      id: goal.id,
+      name: goal.name,
+      target_amount: goal.target_amount,
+      target_date: goal.target_date,
+      start_amount: goal.savings?.reduce((sum: number, s: any) => sum + (s.amount || 0), 0) || 0,
+    }));
+
+    const totalSavings = enrichedGoals.reduce((sum, g) => sum + g.start_amount, 0);
+    const totalSavingsGoal = enrichedGoals.reduce((sum, g) => sum + g.target_amount, 0);
 
     setTotalSavings(totalSavings);
     setTotalSavingsGoal(totalSavingsGoal);
-    setGoalList(goals || []);
+    setGoalList(enrichedGoals);
   }, []);
 
   useEffect(() => {

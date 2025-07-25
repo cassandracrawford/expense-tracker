@@ -113,12 +113,14 @@ export default function GoalScreen() {
             <View style={{ flexDirection: 'row', gap: 20 }}>
               {goalList.map((goal) => (
                 <GoalsCard
+                  goalId={goal.id}
                   key={goal.id}
                   name={goal.name}
                   targetAmount={goal.target_amount}
                   startAmount={goal.start_amount}
                   targetDate={goal.target_date}
-                  onDelete={() => handleDeleteGoal(goal.id)} // ✅ 這裡確保 onDelete 有傳進去
+                  onDelete={() => handleDeleteGoal(goal.id)}
+                  onSaveComplete={refresh}
                 />
               ))}
             </View>

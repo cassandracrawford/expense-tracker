@@ -1,18 +1,20 @@
-import { StyleSheet, View, Text, Pressable, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, Pressable, TouchableOpacity } from "react-native"; 
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from "react";
 import AddSavingsModal from "./addAmountModal";
 
-type Props = {
+interface Props {
   name: string;
   targetAmount: number;
   startAmount: number;
   targetDate: string;
-  onDelete: () => void; 
-};
+  onDelete: () => void;
+  goalId: string;
+  onSaveComplete?: () => void;
+}
 
-export default function GoalsCard({ name, targetAmount, startAmount, targetDate, onDelete }: Props) {
+export default function GoalsCard({ name, targetAmount, startAmount, targetDate, onDelete, goalId, onSaveComplete }: Props) {
   const [montserratLoaded] = useMontserratFonts({ Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold });
   const [modalAddSavingsVisible, setModalAddSavingsVisible] = useState(false);
 
@@ -21,8 +23,8 @@ export default function GoalsCard({ name, targetAmount, startAmount, targetDate,
   const savingsProgress = targetAmount > 0 ? Math.min(startAmount / targetAmount, 1) : 0;
   const percentageSaved = savingsProgress * 100;
   const remainingAmount = targetAmount - startAmount;
-  const timeLeftText = '2 months left'; // 📌 日後可依據 targetDate 計算
-  const weeklyNeeded = (remainingAmount / 8).toFixed(0); // 假設 2 個月即 8 週
+  const timeLeftText = '2 months left'; 
+  const weeklyNeeded = (remainingAmount / 8).toFixed(0); 
 
   return (
     <View style={styles.container}>
@@ -59,7 +61,15 @@ export default function GoalsCard({ name, targetAmount, startAmount, targetDate,
         <Text style={styles.addText}>+ add savings</Text>
       </Pressable>
 
-      <AddSavingsModal visible={modalAddSavingsVisible} onClose={() => setModalAddSavingsVisible(false)} />
+      <AddSavingsModal 
+        visible={modalAddSavingsVisible} 
+        onClose={() => setModalAddSavingsVisible(false)} 
+        goalId={goalId} 
+        onSaveComplete={() => {
+          setModalAddSavingsVisible(false);
+          onSaveComplete?.();
+        }}
+      />
     </View>
   );
 }
