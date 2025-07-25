@@ -1,135 +1,132 @@
+// ✅ 完整整合：GoalScreen (goals.tsx)
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium } from '@expo-google-fonts/montserrat';
 import { useFonts as useOpenSansFonts, OpenSans_400Regular, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import BudgetCard from '../../components/budgetComponent';
 import GoalsCard from '@/components/goalsComponent';
 import BudgetModal from '@/components/addBudgetModal';
 import SavingsModal from '@/components/addSavingsModal';
+import { useUserGoalData } from '@/hooks/useUserGoalData';
+import supabase from '@/lib/supabase';
 
 export default function GoalScreen() {
-    const [montserratLoaded] = useMontserratFonts({Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium});
-    const [opensansLoaded] = useOpenSansFonts({OpenSans_400Regular, OpenSans_700Bold});
+  const [montserratLoaded] = useMontserratFonts({
+    Montserrat_400Regular,
+    Montserrat_700Bold,
+    Montserrat_500Medium,
+  });
 
-    const router = useRouter();
+  const [opensansLoaded] = useOpenSansFonts({
+    OpenSans_400Regular,
+    OpenSans_700Bold,
+  });
 
-    const totalBudget = 2450;
-    const totalAmountSpent = 2000;
-    const progress = totalBudget > 0 ? Math.min(totalAmountSpent / totalBudget, 1) : 0;
+  const [modalBudgetVisible, setModalBudgetVisible] = useState(false);
+  const [modalSavingsVisible, setModalSavingsVisible] = useState(false);
 
-    const totalSavings = 3000;
-    const totalSavingsGoal = 10000;
-    const savingsProgress = totalSavingsGoal > 0 ? Math.min(totalSavings /totalSavingsGoal, 1) : 0;
+  const {
+    totalBudget,
+    totalSpent,
+    totalSavings,
+    totalSavingsGoal,
+    activeGoalsCount,
+    goalList,
+    refresh,
+  } = useUserGoalData();
 
-    const [modalBudgetVisible, setModalBudgetVisible] = useState(false);
-    const [modalSavingsVisible, setModalSavingsVisible] = useState(false);
+  const budgetProgress = totalBudget > 0 ? Math.min(totalSpent / totalBudget, 1) : 0;
+  const savingsProgress = totalSavingsGoal > 0 ? Math.min(totalSavings / totalSavingsGoal, 1) : 0;
 
-    const activeGoals = 4;
-
-    if (!montserratLoaded || !opensansLoaded) {
-        return null;
+  const handleDeleteGoal = async (id: string) => {
+    console.log('🗑️ Try deleting goal:', id);
+    const { error } = await supabase.from('goals').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete goal:', error.message);
+    } else {
+      console.log('Goal deleted');
+      await refresh();
     }
+  };
 
-    return (
-        <ScrollView style={styles.container}>
-            {/* Total Budget Progress */}
-            <View style={styles.subContainer}>
-              <View style={{ 
-                flexDirection: 'row' , 
-                justifyContent: 'space-between', 
-                alignItems:'flex-end',
-                marginBottom: 10,
-              }}>
-                <Text style={styles.containerTitle}>Total Budget</Text>
+  if (!montserratLoaded || !opensansLoaded) return null;
 
-                {/* Total Amount Spent vs Total Budget */}
-                <Text style={[styles.containterSubTitle, { 
-                  verticalAlign: 'middle', 
-                  paddingBottom: 2}]
-                }>
-                  ${totalAmountSpent.toFixed(2)} / ${totalBudget.toFixed(2)}
-                </Text>
-              </View>
+  return (
+    <ScrollView style={styles.container}>
+      {/* 💰 Total Budget Section */}
+      <View style={styles.subContainer}>
+        <View style={styles.headerRow}>
+          <Text style={styles.containerTitle}>Total Budget</Text>
+          <Text style={styles.containterSubTitle}>${totalSpent.toFixed(2)} / ${totalBudget.toFixed(2)}</Text>
+        </View>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { flex: budgetProgress * 100 }]} />
+          <View style={{ flex: 100 - budgetProgress * 100 }} />
+        </View>
+        <Text style={styles.containterSubTitle}>Total budget set this month.</Text>
+      </View>
 
-              {/* Progress Bar */}
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { flex: (progress * 100) }]} />
-                <View style={{ flex: 100 - (progress * 100) }} />
-              </View>
+      {/* 🏦 Total Savings Section */}
+      <View style={[styles.subContainer, { marginBottom: 20 }]}>
+        <View style={styles.headerRow}>
+          <Text style={styles.containerTitle}>Total Savings</Text>
+          <Text style={styles.containterSubTitle}>${totalSavings.toFixed(2)} / ${totalSavingsGoal.toFixed(2)}</Text>
+        </View>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { flex: savingsProgress * 100 }]} />
+          <View style={{ flex: 100 - savingsProgress * 100 }} />
+        </View>
+        <Text style={styles.containterSubTitle}>{activeGoalsCount} active goals.</Text>
+      </View>
 
-              <Text style={styles.containterSubTitle}>Total budget set this month.</Text>
+      {/* 📊 Monthly Budget Card */}
+      <View style={{ position: 'relative', marginBottom: 10 }}>
+        <Pressable style={styles.fab} onPress={() => setModalBudgetVisible(true)}>
+          <Text style={styles.fabText}>+ Add Budget</Text>
+        </Pressable>
+        <BudgetModal visible={modalBudgetVisible} onClose={() => setModalBudgetVisible(false)} />
+
+        <View style={styles.subContainer}>
+          <Text style={styles.containerTitle}>Monthly Budget</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 20 }}>
+              <BudgetCard category="Grocery" icon="basket" spentBudget={650} categoryBudget={1000} />
             </View>
+          </ScrollView>
+        </View>
+      </View>
 
-            {/* Total Savings Progress */}
-            <View style={[styles.subContainer, {
-              marginBottom: 20,}]
-            }>
-              <View style={{ 
-                flexDirection: 'row' , 
-                justifyContent: 'space-between', 
-                alignItems:'flex-end',
-                marginBottom: 10, 
-              }}>
-                <Text style={styles.containerTitle}>Total Savings</Text>
+      {/* 🎯 Savings Goals */}
+      <View style={{ position: 'relative' }}>
+        <Pressable style={styles.fab} onPress={() => setModalSavingsVisible(true)}>
+          <Text style={styles.fabText}>+ Add Goal</Text>
+        </Pressable>
+        <SavingsModal
+          visible={modalSavingsVisible}
+          onClose={() => setModalSavingsVisible(false)}
+          onSaveComplete={refresh}
+        />
 
-                {/* Total Amount Saved vs Total Savings Goal */}
-                <Text style={[styles.containterSubTitle, { 
-                  verticalAlign: 'middle', paddingBottom: 2}]}>${totalSavings.toFixed(2)} / ${totalSavingsGoal.toFixed(2)}</Text>
-              </View>
-
-              {/* Progress Bar */}
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { flex: (savingsProgress * 100) }]} />
-                <View style={{ flex: 100 - (savingsProgress * 100) }} />
-              </View>
-
-              <Text style={styles.containterSubTitle}>{activeGoals} active goals.</Text>
+        <View style={styles.subContainer}>
+          <Text style={styles.containerTitle}>Savings Goals</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 20 }}>
+              {goalList.map((goal) => (
+                <GoalsCard
+                  key={goal.id}
+                  name={goal.name}
+                  targetAmount={goal.target_amount}
+                  startAmount={goal.start_amount}
+                  targetDate={goal.target_date}
+                  onDelete={() => handleDeleteGoal(goal.id)} // ✅ 這裡確保 onDelete 有傳進去
+                />
+              ))}
             </View>
-
-            {/* Monthly Budget */}
-            <View style={{
-              position: 'relative', 
-              marginBottom: 10,
-            }}>
-              <Pressable style={styles.fab} onPress={() => setModalBudgetVisible(true)}>
-                <Text style={styles.fabText}>+ Add Budget</Text>
-              </Pressable>
-
-              <BudgetModal visible={modalBudgetVisible} onClose={() => setModalBudgetVisible(false)} />
-
-              <View style={styles.subContainer}>
-                  <Text style={styles.containerTitle}>Monthly Budget</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', gap: 20}}>
-                      <BudgetCard category='Grocery' icon='basket' spentBudget={650} categoryBudget={1000}/>
-                      <BudgetCard category='Utilities' icon='lightbulb' spentBudget={400} categoryBudget={450}/>
-                      <BudgetCard category='Rent' icon='home' spentBudget={1800} categoryBudget={2000}/>
-                    </View>
-                  </ScrollView>
-              </View>
-            </View>
-
-            {/* Savings Goals */}
-            <View style={{position: 'relative'}}>
-              <Pressable style={styles.fab} onPress={() => setModalSavingsVisible(true)}>
-                <Text style={styles.fabText}>+ Add Goal</Text>
-              </Pressable>
-
-              <SavingsModal visible={modalSavingsVisible} onClose={() => setModalSavingsVisible(false)} />
-              <View style={styles.subContainer}>
-                <Text style={styles.containerTitle}>Savings Goals</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', gap: 20}}>
-                      <GoalsCard goalTitle='Iphone 16 Pro Max' targetDate='Aug 2025' />
-                      <GoalsCard goalTitle='Iphone 16 Pro Max' targetDate='Aug 2025' />
-                      <GoalsCard goalTitle='Iphone 16 Pro Max' targetDate='Aug 2025' />
-                    </View>
-                  </ScrollView>
-              </View>
-            </View>
-        </ScrollView>
-    );
+          </ScrollView>
+        </View>
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -137,20 +134,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF8F2',
     paddingHorizontal: 16,
-    paddingTop: 0,
   },
   subContainer: {
     backgroundColor: '#F5E5DC',
     marginVertical: 8,
-    minHeight: 100,
     borderRadius: 20,
     padding: 20,
   },
   containerTitle: {
     fontFamily: 'Poppins_500Medium',
-    textTransform: 'uppercase',
     fontSize: 18,
     color: '#3A2A21',
+    textTransform: 'uppercase',
   },
   containterSubTitle: {
     fontFamily: 'Montserrat_500Medium',
@@ -158,35 +153,36 @@ const styles = StyleSheet.create({
     color: '#5C4630',
   },
   progressBar: {
-    height: 20, 
+    height: 20,
     backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    marginBottom: 8,
-    width: '100%',
     flexDirection: 'row',
+    marginBottom: 8,
   },
   progressFill: {
     backgroundColor: '#C6844F',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 10,
   },
   fab: {
     width: 150,
     height: 40,
     position: 'absolute',
-    top: -10, 
+    top: -10,
     left: '75%',
-    transform: [{ translateX: -75 }], 
+    transform: [{ translateX: -75 }],
     backgroundColor: '#C6844F',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    elevation: 3,
   },
   fabText: {
     fontFamily: 'Montserrat_700Bold',
     color: '#FFFFFF',
     fontSize: 14,
-  }
+  },
 });
