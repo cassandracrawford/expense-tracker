@@ -3,18 +3,18 @@ import {
   useFonts as useMontserratFonts,
   Montserrat_400Regular,
   Montserrat_500Medium,
-  Montserrat_700Bold
+  Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
 import {
   useFonts as useOpenSansFonts,
   OpenSans_400Regular,
-  OpenSans_700Bold
+  OpenSans_700Bold,
 } from '@expo-google-fonts/open-sans';
 import {
   useFonts as usePoppinsFonts,
   Poppins_400Regular,
   Poppins_500Medium,
-  Poppins_700Bold
+  Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
 import { Link } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
@@ -22,34 +22,29 @@ import { useFocusEffect } from '@react-navigation/native';
 import supabase from '../../lib/supabase';
 import { DonutChart, ReminderCard } from '../../components/dashboardComponents';
 import TransactionList, { TransactionItem } from '../../components/TransactionList';
+import { useUserFinanceData } from '../../hooks/useUserFinanceData'; 
 
 export default function Dashboard() {
   const [montserratLoaded] = useMontserratFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
-    Montserrat_700Bold
+    Montserrat_700Bold,
   });
   const [opensansLoaded] = useOpenSansFonts({
     OpenSans_400Regular,
-    OpenSans_700Bold
+    OpenSans_700Bold,
   });
   const [poppinsLoaded] = usePoppinsFonts({
     Poppins_400Regular,
     Poppins_500Medium,
-    Poppins_700Bold
+    Poppins_700Bold,
   });
+
 
   const [userName, setUserName] = useState<string>('User');
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
 
-  // calculate total income, expense and percentage
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((acc, t) => acc + (t.amount || 0), 0);
-  const totalExpense = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => acc + (t.amount || 0), 0);
-  const percentage = totalIncome + totalExpense === 0 ? 0 : totalExpense / (totalIncome + totalExpense);
+  const { totalBudget, totalSpent, percentageUsed, refresh } = useUserFinanceData();
 
   const ensureUserRowExists = async (user: any) => {
     const { id, email, user_metadata } = user;
@@ -68,13 +63,15 @@ export default function Dashboard() {
 
     if (!existing) {
       console.log('🚧 No user row found, inserting...');
-      const { error: insertError } = await supabase.from('users').insert([{
-        id,
-        full_name: fullName,
-        email,
-        currency: 'USD',
-        language: 'en'
-      }]);
+      const { error: insertError } = await supabase.from('users').insert([
+        {
+          id,
+          full_name: fullName,
+          email,
+          currency: 'USD',
+          language: 'en',
+        },
+      ]);
 
       if (insertError) {
         console.error('❌ Failed to insert user row:', insertError.message);
@@ -144,11 +141,12 @@ export default function Dashboard() {
     fetchUserData();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchUserData();
-    }, [])
-  );
+useFocusEffect(
+  useCallback(() => {
+    fetchUserData();
+    refresh();
+  }, [refresh])
+);
 
   const fontsLoaded = montserratLoaded && opensansLoaded && poppinsLoaded;
   if (!fontsLoaded) return null;
@@ -160,7 +158,7 @@ export default function Dashboard() {
       {/* Main Budget Section */}
       <View style={[styles.subContainer, { paddingTop: 30 }]}>
         <View style={{ flexDirection: 'column', gap: 20 }}>
-          <DonutChart percentage={percentage} />
+          <DonutChart percentage={percentageUsed} />
           <View style={{ flexDirection: 'column', gap: 20 }}>
             <View>
               <View style={styles.rowBetween}>
@@ -168,14 +166,18 @@ export default function Dashboard() {
                   <View style={[styles.legend, { backgroundColor: '#B6A089' }]} />
                   <Text style={styles.chartLabel}>Total Budget</Text>
                 </View>
-                <Text style={[styles.chartAmount, { color: '#B6A089' }]}>${totalIncome}</Text>
+                <Text style={[styles.chartAmount, { color: '#B6A089' }]}>
+                  ${totalBudget.toLocaleString()}
+                </Text>
               </View>
               <View style={styles.rowBetween}>
                 <View style={styles.row}>
                   <View style={[styles.legend, { backgroundColor: '#5C4630' }]} />
                   <Text style={styles.chartLabel}>Total Spent</Text>
                 </View>
-                <Text style={[styles.chartAmount, { color: '#5C4630' }]}>${totalExpense}</Text>
+                <Text style={[styles.chartAmount, { color: '#5C4630' }]}>
+                  ${totalSpent.toLocaleString()}
+                </Text>
               </View>
             </View>
             <Link style={[styles.linkStyle, { alignSelf: 'flex-end' }]} href="/tabs/report">
