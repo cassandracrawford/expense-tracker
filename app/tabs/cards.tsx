@@ -275,17 +275,20 @@ export default function CardsScreen() {
               .filter((t) => t.card_id === item.id && t.type === 'expense')
               .reduce((sum, t) => sum + Number(t.amount), 0);
             return (
-              <View style={{ width: screenWidth - 32 }}>
-                <CreditCard
-                  cardName={item.name}
-                  cardEnding={parseInt(item.number.slice(-4))}
-                  cardExpense={total}
-                  cardDueDate={item.due_date}
-                  cardType={item.type}
-                />
+              <View style={styles.cardWrapper}>
+                <View style={styles.cardContainer}>
+                  <CreditCard
+                    cardName={item.name}
+                    cardEnding={parseInt(item.number.slice(-4))}
+                    cardExpense={total}
+                    cardDueDate={item.due_date}
+                    cardType={item.type}
+                  />
+                </View>
               </View>
             );
           }}
+
         />
       ) : (
         <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 80 }}>
@@ -471,5 +474,24 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat_700Bold',
     color: '#FFFFFF',
     fontSize: 14,
-  }
+  },
+  cardWrapper: {
+    width: screenWidth,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#FFF8F2'
+  },
+
+  cardContainer: {
+    backgroundColor: '#F5E5DC',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    width: screenWidth * 0.9,
+  },
 });
