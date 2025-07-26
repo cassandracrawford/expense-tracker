@@ -166,7 +166,7 @@ export default function CardsScreen() {
           <TouchableOpacity
             key={tab}
             onPress={() => {
-              setSelectedTab(tab); // ✅ properly updates the tab
+              setSelectedTab(tab); // properly updates the tab
 
               if (tab === 'Credit Card' && cards.length > 0) {
                 setSelectedCardId(cards[0].id);
