@@ -1,16 +1,20 @@
-import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, ScrollView, Dimensions, Pressable } from 'react-native'; // Import RefreshControl and ScrollView
+import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, ScrollView, Dimensions, Pressable } from 'react-native';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold, Montserrat_400Regular_Italic } from '@expo-google-fonts/montserrat';
-import { useEffect, useState, useCallback } from 'react'; 
+import { useEffect, useState, useCallback } from 'react';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import supabase from '@/lib/supabase';
 import TransactionCard from '@/components/transactionCard';
-import { User } from '@supabase/supabase-js'; 
-import { useIsFocused } from '@react-navigation/native'; 
+import { User } from '@supabase/supabase-js';
+import { useIsFocused } from '@react-navigation/native';
 import { PieChart } from 'react-native-chart-kit';
 import CreditCard from '@/components/cardComponent';
 import AddNewCardModal from '@/components/addNewCardModal';
+import { FlatList, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { useRef } from 'react';
+
 
 const screenWidth = Dimensions.get('window').width;
+
 
 export default function CardsScreen() {
   const [montserratLoaded] = useMontserratFonts({
@@ -27,243 +31,355 @@ export default function CardsScreen() {
     description?: string;
     payment_method: string;
     date: Date;
+    card_id?: string;
+    type: 'income' | 'expense';
   };
 
+  type Card = {
+    id: string;
+    user_id: string;
+    name: string;
+    number: string;
+    balance: number;
+    spending_limit: number;
+    due_date: string;
+    type: string;
+  };
+  type TabType = 'All' | 'Credit Card' | 'Cash';
+
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false); 
-  const [selectedTab, setSelectedTab] = useState<'All' | 'Credit Card' | 'Cash'>('All');
-  const cardExpense = 1200;
-  const cashExpense = 235;
-
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<TabType>('All');
   const isFocused = useIsFocused();
   const [modalNewCardVisible, setModalNewCardVisible] = useState(false);
+  const cardWidth = screenWidth * 0.9;
+  
+  const sidePadding = (screenWidth - cardWidth) / 2;
+
+  const flatListRef = useRef<FlatList<Card>>(null);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+    const card = cards[index];
+    if (card) {
+      setSelectedCardId(card.id);
+    }
+  };
+
 
   const fetchTransactions = useCallback(async () => {
-    if (!currentUser) {
-      setIsLoading(false); 
-      return;
-    }
+    if (!currentUser) return;
+    setIsLoading(true);
+    setIsRefreshing(true);
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: false });
+    if (error) console.error('Transaction fetch error:', error.message);
+    setTransactions(data ?? []);
+    setIsLoading(false);
+    setIsRefreshing(false);
+  }, [currentUser]);
 
-    try {
-      setIsLoading(true); // Initial load or manual refresh
-      setIsRefreshing(true); // For pull-to-refresh
-      const { data, error: transError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: false });
-
-      if (transError) {
-        console.error('Transaction fetch error:', transError.message);
-      }
-
-      setTransactions(data ?? []);
-    } catch (err) {
-      console.error('Unexpected error:', err);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false); 
-    }
-  }, [currentUser]); 
+  const fetchCards = useCallback(async () => {
+    if (!currentUser) return;
+    const { data, error } = await supabase
+      .from('cards')
+      .select('*')
+      .eq('user_id', currentUser.id);
+    if (error) console.error('Card fetch error:', error.message);
+    setCards(data ?? []);
+  }, [currentUser]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          setCurrentUser(session.user);
-        } else {
+        if (session?.user) setCurrentUser(session.user);
+        else {
           setCurrentUser(null);
           setTransactions([]);
+          setCards([]);
           setIsLoading(false);
         }
       }
     );
-
     const checkInitialSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Initial session fetch error:', error.message);
-      }
-      if (session?.user) {
-        setCurrentUser(session.user);
-      } else {
-        setCurrentUser(null);
-        setIsLoading(false);
-      }
+      if (session?.user) setCurrentUser(session.user);
+      else setIsLoading(false);
     };
-
     checkInitialSession();
-
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Effect to fetch transactions when currentUser changes (initial load/login)
   useEffect(() => {
-    if (currentUser !== null) {
+    if (currentUser) {
       fetchTransactions();
+      fetchCards();
     }
-  }, [currentUser, fetchTransactions]);
+  }, [currentUser, fetchTransactions, fetchCards]);
 
-  // Only refresh if focused AND a user is logged in
   useEffect(() => {
-    if (isFocused && currentUser) { 
+    if (isFocused && currentUser) {
       fetchTransactions();
+      fetchCards();
     }
-  }, [isFocused, currentUser, fetchTransactions]);
+  }, [isFocused, currentUser, fetchTransactions, fetchCards]);
+
+  const cardTotal = transactions
+    .filter((t) => t.card_id && t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const cashTotal = transactions
+    .filter((t) => !t.card_id && t.payment_method === 'Cash' && t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0); 
+
+  const displayedTransactions = transactions.filter((t) => {
+    if (t.type !== 'expense') return false;
+    if (selectedTab === 'All') return true;
+    if (selectedTab === 'Cash') return t.payment_method === 'Cash';
+    if (selectedTab === 'Credit Card' && selectedCardId) return t.card_id === selectedCardId;
+    return false;
+  });
 
 
   const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if (error) {
-        console.error('Delete error:', error.message);
-      } else {
-        setTransactions((prev) => prev.filter((t) => t.id !== id));
-      }
-    } catch (err) {
-      console.error('Unexpected delete error:', err);
-    }
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (!error) setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  if (isLoading && !isRefreshing) { // Show loading screen only on initial load or if not already refreshing
-    return (
-      <View style={styles.loadingScreen}>
-        <Text>Loading...</Text>
-      </View>
-    );
+  if (!montserratLoaded || (isLoading && !isRefreshing)) {
+    return <View style={styles.loadingScreen}><Text>Loading...</Text></View>;
   }
-
-  if (!montserratLoaded) return null;
+  const hasExpense = transactions.some(t => t.type === 'expense');
 
   return (
     <View style={styles.container}>
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10}}>
-        {['All', 'Credit Card', 'Cash'].map((tab) => (
-          <TouchableOpacity 
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+        {(['All', 'Credit Card', 'Cash'] as TabType[]).map((tab) => (
+          <TouchableOpacity
             key={tab}
-            onPress={() => setSelectedTab(tab as any)}
-            style={[styles.tab, {backgroundColor: selectedTab === tab ? '#D2996C' : '#FFF8F2'}]}
-          >  
-            <Text style={{
-              color: selectedTab === tab ? '#FFFFFF' : '#D2996C', 
-              fontFamily: 'Montserrat_700Bold'
-            }}>{tab}</Text>
+            onPress={() => {
+              setSelectedTab(tab); // ✅ properly updates the tab
+
+              if (tab === 'Credit Card' && cards.length > 0) {
+                setSelectedCardId(cards[0].id);
+                flatListRef.current?.scrollToIndex({ index: 0, animated: true });
+              } else {
+                setSelectedCardId(null);
+              }
+            }}
+
+            style={[styles.tab, { backgroundColor: selectedTab === tab ? '#D2996C' : '#FFF8F2' }]}
+          >
+            <Text style={{ color: selectedTab === tab ? '#FFFFFF' : '#D2996C', fontFamily: 'Montserrat_700Bold' }}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      
-      {/* If 'ALL' is selected */}
-      {selectedTab === 'All' && (
+
+{selectedTab === 'All' && (
+  <>
+    {cardTotal + cashTotal > 0 ? (
       <>
-      <View style={{flexDirection: 'row', gap: 5, width: '100%'}}>
-        <View style={styles.subContainer}>
-          <Text style={[styles.title, {textAlign: 'center'}]}>Credit Card Expense</Text>
-          <Text style={styles.totalAmount}>${cardExpense}</Text>
-        </View>
-        <View style={styles.subContainer}>
-          <Text style={[styles.title, {textAlign: 'center'}]}>Cash</Text>
-          <Text style={[styles.title, {textAlign: 'center'}]}>Expense</Text>
-          <Text style={styles.totalAmount}>${cashExpense}</Text>
-        </View>
-      </View>
-
-      {/* Pie Chart */}
-      <PieChart
-        data={[
-          { name: 'Credit Card', spending: cardExpense, color: '#C6844F', legendFontColor: '#3A2A21', legendFontSize: 12 },
-          { name: 'Cash', spending: cashExpense, color: '#D9B08C', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        ]}
-        width={screenWidth - 32}
-        height={220}
-        chartConfig={{
-          color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
-        }}
-        accessor="spending"
-        backgroundColor="transparent"
-        paddingLeft="16"
-        absolute 
-      />
-      </>
-      )}
-
-      {/* If 'Credit Card' is selected */}
-      { selectedTab === 'Credit Card' && (
-        <View style={{position: 'relative', width: '100%', marginBottom: 20}}>
-          <View style={[styles.subContainer,{width: '100%'}]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={{ flexDirection: 'row', gap: 20}}>
-                <CreditCard cardName='Credit Card 1' cardEnding={4567} cardExpense={1200} cardDueDate='Aug 4, 2025' cardType='Visa' />
-                <CreditCard cardName='Credit Card 2' cardEnding={8673} cardExpense={1200} cardDueDate='Aug 4, 2025' cardType='Mastercard' />
-                <CreditCard cardName='Credit Card 3' cardEnding={8880} cardExpense={1200} cardDueDate='Aug 4, 2025' cardType='Visa' />
-              </View>
-            </ScrollView>
+        <View style={{ flexDirection: 'row', gap: 5, width: '100%' }}>
+          <View style={styles.subContainer}>
+            <Text style={[styles.title, { textAlign: 'center' }]}>Credit Card Expense</Text>
+            <Text style={styles.totalAmount}>${cardTotal.toFixed(2)}</Text>
           </View>
-
-          <Pressable style={styles.fab} onPress={() => setModalNewCardVisible(true)}>
-            <Text style={styles.fabText}>Add Card</Text>
-          </Pressable>
-
-          <AddNewCardModal visible={modalNewCardVisible} onClose={() => setModalNewCardVisible(false)} />
+          <View style={styles.subContainer}>
+            <Text style={[styles.title, { textAlign: 'center' }]}>Cash Expense</Text>
+            <Text style={styles.totalAmount}>${cashTotal.toFixed(2)}</Text>
+          </View>
         </View>
-      )}
 
-      {/* TRANSACTIONS */}
-      {transactions.length > 0 ? (
-        <SwipeListView
-          data={transactions}
+        <PieChart
+          data={[
+            {
+              name: 'Credit Card',
+              spending: cardTotal,
+              color: '#C6844F',
+              legendFontColor: '#3A2A21',
+              legendFontSize: 12,
+            },
+            {
+              name: `Cash`,
+              spending: cashTotal,
+              color: '#D9B08C',
+              legendFontColor: '#3A2A21',
+              legendFontSize: 12,
+            },
+          ]}
+          width={screenWidth - 32}
+          height={220}
+          chartConfig={{
+            color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
+          }}
+          accessor="spending"
+          backgroundColor="transparent"
+          paddingLeft="16"
+          absolute
+        />
+      </>
+    ) : (
+      <View style={{ marginTop: 20, alignItems: 'center' }}>
+        <Text style={{
+          fontFamily: 'Montserrat_700Bold',
+          fontSize: 16,
+          color: '#3A2A21',
+          textAlign: 'center',
+          backgroundColor: '#FFF8F2',
+          paddingHorizontal: 20,
+          paddingVertical: 10,
+          borderRadius: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+          elevation: 2
+        }}>
+          Add a transaction to see your chart!
+        </Text>
+      </View>
+    )}
+  </>
+)}
+      {selectedTab === 'Credit Card' && (
+    <View style={{ marginBottom: 40 }}>
+      {cards.length > 0 ? (
+        <FlatList
+          data={cards}
+          ref={flatListRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
           keyExtractor={(item) => item.id}
-          extraData={transactions}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          // Implement pull-to-refresh
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={fetchTransactions}
-              tintColor="#000" // Customize spinner color
-            />
-          }
-          renderItem={({ item }) => (
-            <View style={{ height: 80, marginVertical: 5 }}>
-              <TransactionCard transaction={item} />
-            </View>
-          )}
-          renderHiddenItem={({ item }) => (
-            <View style={styles.rowBack}>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id)}
-              >
-                <Text style={styles.deleteText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          rightOpenValue={-150}
-          disableRightSwipe
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+          }}
+          snapToAlignment="center"
+          decelerationRate="fast"
+          getItemLayout={(data, index) => ({
+            length: screenWidth - 32,
+            offset: (screenWidth - 32) * index,
+            index,
+          })}
+          renderItem={({ item }) => {
+            const total = transactions
+              .filter((t) => t.card_id === item.id && t.type === 'expense')
+              .reduce((sum, t) => sum + Number(t.amount), 0);
+            return (
+              <View style={{ width: screenWidth - 32 }}>
+                <CreditCard
+                  cardName={item.name}
+                  cardEnding={parseInt(item.number.slice(-4))}
+                  cardExpense={total}
+                  cardDueDate={item.due_date}
+                  cardType={item.type}
+                />
+              </View>
+            );
+          }}
         />
       ) : (
-        <ScrollView // Use ScrollView to allow RefreshControl when no transactions
-          contentContainerStyle={styles.noTransactionsContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={fetchTransactions}
-              tintColor="#000"
-            />
-          }
-        >
-          <Text style={{ textAlign: 'center', marginTop: 20 }}>No transactions</Text>
-        </ScrollView>
+        <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 80 }}>
+          <Text style={{
+            fontFamily: 'Montserrat_700Bold',
+            fontSize: 16,
+            color: '#3A2A21',
+            textAlign: 'center',
+            backgroundColor: '#FFF8F2',
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 12,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 3,
+            elevation: 2
+          }}>
+            You haven’t added any cards yet.
+          </Text>
+        </View>
       )}
+
+      <Pressable style={styles.fab} onPress={() => setModalNewCardVisible(true)}>
+        <Text style={styles.fabText}>Add Card</Text>
+      </Pressable>
+
+      <AddNewCardModal
+        visible={modalNewCardVisible}
+        onClose={async () => {
+          setModalNewCardVisible(false);
+          await fetchCards();          // Refresh card list
+          await fetchTransactions();   // Refresh transactions for the new card
+
+          // Scroll to and select the newest card
+          if (cards.length > 0) {
+            const latestCard = cards[cards.length - 1];
+            setSelectedCardId(latestCard.id);
+            setTimeout(() => {
+              flatListRef.current?.scrollToIndex({
+                index: cards.length - 1,
+                animated: true,
+              });
+            }, 300);
+          }
+        }}
+      />  
+    </View>
+  )}
+  {selectedTab === 'Cash' && cashTotal === 0 && (
+  <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 20 }}>
+    <Text style={{
+      fontFamily: 'Montserrat_700Bold',
+      fontSize: 16,
+      color: '#3A2A21',
+      textAlign: 'center',
+      backgroundColor: '#FFF8F2',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2
+    }}>
+      No cash expenses yet. Add a transaction to see it here!
+    </Text>
+  </View>
+)}
+      <SwipeListView
+        data={displayedTransactions}
+        keyExtractor={(item) => item.id}
+        extraData={transactions}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={fetchTransactions} tintColor="#000" />}
+        renderItem={({ item }) => (
+          <View style={{ height: 80, marginVertical: 5 }}>
+            <TransactionCard transaction={item} />
+          </View>
+        )}
+        renderHiddenItem={({ item }) => (
+          <View style={styles.rowBack}>
+            <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
+              <Text style={styles.deleteText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        rightOpenValue={-150}
+        disableRightSwipe
+      />
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -299,7 +415,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   noTransactionsContainer: {
-    flexGrow: 1, 
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFF8F2',
@@ -324,7 +440,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   title: {
-    color: '#3A2A21', 
+    color: '#3A2A21',
     textTransform: 'uppercase',
     lineHeight: 20,
     fontSize: 16,
@@ -339,9 +455,9 @@ const styles = StyleSheet.create({
     width: 150,
     height: 40,
     position: 'absolute',
-    bottom: -12, 
+    bottom: -12,
     left: '75%',
-    transform: [{ translateX: -75 }], 
+    transform: [{ translateX: -75 }],
     backgroundColor: '#C6844F',
     paddingVertical: 10,
     paddingHorizontal: 20,

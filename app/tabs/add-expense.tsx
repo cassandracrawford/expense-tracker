@@ -16,6 +16,16 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import supabase from '@/lib/supabase';
+import { useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+
+
+type PaymentOption = {
+  label: string;
+  value: string;
+  cardId?: string;
+};
 
 export default function AddExpenseScreen() {
   const router = useRouter();
@@ -33,17 +43,18 @@ export default function AddExpenseScreen() {
     { label: 'Transportation', value: 'Transportation' },
     { label: 'Groceries', value: 'Groceries' },
     { label: 'Utilities', value: 'Utilities' },
-    { label: 'Entertainment', value: 'Entertainment' },
   ]);
 
   const [sourceOpen, setSourceOpen] = useState(false);
-  const [sourceValue, setSourceValue] = useState('Cash');
-  const [sourceItems, setSourceItems] = useState([
+  const [sourceValue, setSourceValue] = useState('Cash'); // Default to 'Cash'
+  const [sourceItems, setSourceItems] = useState<PaymentOption[]>([
     { label: 'Cash', value: 'Cash' },
-    { label: 'Card', value: 'Card' },
-    { label: 'Bank Transfer', value: 'Bank Transfer' },
-    { label: 'PayPal', value: 'PayPal' },
+
   ]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  
+
 
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
   const [recurrenceItems, setRecurrenceItems] = useState([
@@ -68,7 +79,9 @@ export default function AddExpenseScreen() {
     type: 'expense',
     is_recurring: true,
     recurrence_frequency: recurrence,
-    user_id: user?.id, 
+    user_id: user?.id,
+    card_id: selectedCardId,
+
   }]);
 
   if (error) {
@@ -80,6 +93,39 @@ export default function AddExpenseScreen() {
     ]);
   }
 };
+ const fetchCards = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: cards, error } = await supabase
+      .from('cards')
+      .select('id, name')
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error fetching cards:', error);
+      return;
+    }
+
+    const cardOptions = cards.map(card => ({
+      label: `Card - ${card.name}`,
+      value: card.name,
+      cardId: card.id,
+    }));
+
+
+    setSourceItems([{ label: 'Cash', value: 'Cash' }, ...cardOptions]);
+  };
+useEffect(() => {
+  fetchCards();
+}, []);
+useFocusEffect(
+  useCallback(() => {
+    fetchCards();
+  }, [])
+);
+
+
 
   return (
     <SafeAreaView style={styles.scroll}>
@@ -137,7 +183,7 @@ export default function AddExpenseScreen() {
                   setItems={setCategoryItems}
                   placeholder="Select Category"
                   style={styles.dropdown}
-                  dropDownContainerStyle={[styles.dropdownBox, { maxHeight: 88 }]}
+                  dropDownContainerStyle={[styles.dropdownBox, { maxHeight: 300 }]}
                   textStyle={styles.dropdownText}
                   listMode="FLATLIST"
                   flatListProps={{
@@ -149,7 +195,7 @@ export default function AddExpenseScreen() {
                       index,
                     }),
                   }}
-                  zIndex={3000}
+                  zIndex={2000}
                   zIndexInverse={1000}
                 />
               </View>
@@ -188,27 +234,22 @@ export default function AddExpenseScreen() {
               value={sourceValue}
               items={sourceItems}
               setOpen={setSourceOpen}
-              setValue={setSourceValue}
+              setValue={(callback) => {
+                const value = callback(sourceValue);
+                setSourceValue(value);
+                const selected = sourceItems.find(item => item.value === value);
+                setSelectedCardId(selected?.cardId || null);
+              }}
               setItems={setSourceItems}
               placeholder="Select Payment Method"
               style={styles.dropdown}
-              dropDownContainerStyle={[styles.dropdownBox, { maxHeight: 88 }]}
+              dropDownContainerStyle={[styles.dropdownBox, { maxHeight: 300 }]}
               textStyle={styles.dropdownText}
-              listMode="FLATLIST"
-              flatListProps={{
-                scrollEnabled: true,
-                initialNumToRender: 5,
-                getItemLayout: (_, index) => ({
-                  length: 44,
-                  offset: 44 * index,
-                  index,
-                }),
-              }}
-              zIndex={2000}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
               zIndexInverse={2000}
             />
           </View>
-
           <View style={[styles.recurrenceBox, { zIndex: 1000 }]}>
             <View>
               <Text style={styles.recurrenceLabel}>Recurring Expense</Text>

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Modal, View, Text, StyleSheet, Pressable, TextInput, Button, Platform, TouchableOpacity } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker, {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import { Alert } from 'react-native';
+import supabase from '@/lib/supabase';
 
 interface SavingsModalProps {
   visible: boolean;
@@ -16,6 +18,11 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
 
   const [cardTypeOpen, setCardTypeOpen] = useState(false);
   const [cardTypeValue, setCardTypeValue] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [balance, setBalance] = useState('');
+  const [limit, setLimit] = useState('');
+
   const [cardTypeItems, setCardTypeItems] = useState([
     { label: 'Visa', value: 'visa' },
     { label: 'Mastercard', value: 'mastercard' },
@@ -63,6 +70,8 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
                     }}
                     placeholder='e.g. Dream Vacation, New Car'
                     placeholderTextColor='#BDB1A5'
+                    value={cardName}
+                    onChangeText={setCardName}
                 />
                 <Text style={styles.subcontainerText}>Card Type</Text>
                 <DropDownPicker
@@ -93,6 +102,8 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
                     placeholder='1234 5678 0000 9007'
                     placeholderTextColor='#BDB1A5'
                     keyboardType='numeric'
+                    value={cardNumber}
+                    onChangeText={setCardNumber}
                 />
 
                 <Text style={styles.subcontainerText}>Current Balance</Text>
@@ -103,8 +114,8 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
                         placeholder='0.00'
                         placeholderTextColor='#5C4630'
                         keyboardType="numeric"
-                        // value={name}
-                        // onChangeText={setName}
+                        value={balance}
+                        onChangeText={setBalance}
                     />
                 </View>
                 <Text style={styles.subcontainerText}>Spending Limit</Text>
@@ -115,8 +126,8 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
                         placeholder='0.00'
                         placeholderTextColor='#5C4630'
                         keyboardType="numeric"
-                        // value={name}
-                        // onChangeText={setName}
+                        value={limit}
+                        onChangeText={setLimit}
                     />
                 </View>
                 <Text style={styles.subcontainerText}>Payment Due Date</Text>
@@ -150,9 +161,48 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
             </View>
 
             {/* Save Button */}
-            <Pressable style={[styles.button,{backgroundColor: '#C3905E', borderWidth: 2, borderColor: '#C3905E'}]} onPress={onClose}>
-                <Text style={styles.buttonText}>Save</Text>
+            <Pressable
+              style={[styles.button, { backgroundColor: '#C3905E', borderWidth: 2, borderColor: '#C3905E' }]}
+              onPress={async () => {
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+                if (userError || !user) {
+                  Alert.alert('Error', 'User not authenticated.');
+                  return;
+                }
+
+                if (!cardName || !cardNumber || !cardTypeValue) {
+                  Alert.alert('Missing Info', 'Please fill in all required fields.');
+                  return;
+                }
+
+                const { error } = await supabase.from('cards').insert({
+                  user_id: user.id,
+                  name: cardName,
+                  number: cardNumber,
+                  balance: parseFloat(balance) || 0,
+                  spending_limit: parseFloat(limit) || 0,
+                  due_date: date.toISOString(),
+                  type: cardTypeValue,
+                });
+
+                if (error) {
+                  Alert.alert('Insert Failed', error.message);
+                } else {
+                  Alert.alert('Success', 'Card added!');
+                  onClose();
+                  setCardName('');
+                  setCardNumber('');
+                  setBalance('');
+                  setLimit('');
+                  setCardTypeValue('');
+                  setDate(new Date());
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Save</Text>
             </Pressable>
+
 
             {/* Cancel Button */}
             <Pressable style={[styles.button,{borderWidth: 2, borderColor: '#C3905E'}]} onPress={onClose}>
