@@ -1,13 +1,16 @@
-// ✅ 完整整合：GoalScreen (goals.tsx)
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium } from '@expo-google-fonts/montserrat';
 import { useFonts as useOpenSansFonts, OpenSans_400Regular, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+
 import BudgetCard from '../../components/budgetComponent';
 import GoalsCard from '@/components/goalsComponent';
 import BudgetModal from '@/components/addBudgetModal';
 import SavingsModal from '@/components/addSavingsModal';
+
 import { useUserGoalData } from '@/hooks/useUserGoalData';
+import { useUserBudgetData } from '../../hooks/useUserBudgetData';
 import supabase from '@/lib/supabase';
 
 export default function GoalScreen() {
@@ -25,6 +28,7 @@ export default function GoalScreen() {
   const [modalBudgetVisible, setModalBudgetVisible] = useState(false);
   const [modalSavingsVisible, setModalSavingsVisible] = useState(false);
 
+  const { budgets, refresh: fetchBudgets } = useUserBudgetData();
   const {
     totalBudget,
     totalSpent,
@@ -48,6 +52,13 @@ export default function GoalScreen() {
       await refresh();
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();       // refresh goals and totals
+      fetchBudgets();  // refresh budgets
+    }, [])
+  );
 
   if (!montserratLoaded || !opensansLoaded) return null;
 
@@ -84,13 +95,29 @@ export default function GoalScreen() {
         <Pressable style={styles.fab} onPress={() => setModalBudgetVisible(true)}>
           <Text style={styles.fabText}>+ Add Budget</Text>
         </Pressable>
-        <BudgetModal visible={modalBudgetVisible} onClose={() => setModalBudgetVisible(false)} />
+
+        <BudgetModal
+          visible={modalBudgetVisible}
+          onClose={() => setModalBudgetVisible(false)}
+          onSaveComplete={() => {
+            setModalBudgetVisible(false);
+            refresh();
+            fetchBudgets();
+          }}
+        />
 
         <View style={styles.subContainer}>
           <Text style={styles.containerTitle}>Monthly Budget</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', gap: 20 }}>
-              <BudgetCard category="Grocery" icon="basket" spentBudget={650} categoryBudget={1000} />
+              {budgets.map((item) => (
+                <BudgetCard
+                  key={item.category}
+                  category={item.category}
+                  spentBudget={item.spent}
+                  categoryBudget={item.budget}
+                />
+              ))}
             </View>
           </ScrollView>
         </View>
@@ -101,6 +128,7 @@ export default function GoalScreen() {
         <Pressable style={styles.fab} onPress={() => setModalSavingsVisible(true)}>
           <Text style={styles.fabText}>+ Add Goal</Text>
         </Pressable>
+
         <SavingsModal
           visible={modalSavingsVisible}
           onClose={() => setModalSavingsVisible(false)}

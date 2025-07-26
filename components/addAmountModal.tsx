@@ -30,7 +30,7 @@ export default function AddSavingsModal({ visible, onClose, goalId, onSaveComple
       goal_id: goalId,
       user_id: user.id,
       amount: numericAmount,
-      date: new Date().toISOString().split('T')[0], // ⏱只取年月日
+      date: new Date().toISOString().split('T')[0], 
     });
 
     onSaveComplete?.();
