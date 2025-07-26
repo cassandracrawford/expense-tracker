@@ -1,66 +1,171 @@
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { useFonts as useOpenSansFonts, OpenSans_400Regular, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
-import { useRouter } from 'expo-router';
 import { LineChart } from 'react-native-chart-kit';
 import { PieChart } from 'react-native-chart-kit';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import supabase from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
+import { useIsFocused } from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
+
+type Transaction = {
+  type: string;
+  amount: number;
+  category: string;
+  date: string;
+};
+
+type TimeOption = 'Daily' | 'Weekly' | 'Monthly';
 
 export default function ReportScreen() {
     const [montserratLoaded] = useMontserratFonts({Montserrat_400Regular, Montserrat_700Bold});
     const [opensansLoaded] = useOpenSansFonts({OpenSans_400Regular, OpenSans_700Bold});
-   
-    type TimeOption = 'Daily' | 'Weekly' | 'Monthly';
+    
     const [selected, setSelected] = useState<TimeOption>('Daily');
     const options: TimeOption[] = ['Daily', 'Weekly', 'Monthly'];
 
-    const chartData: Record<TimeOption, number[]> = {
-      Daily: [30, 45, 28, 80, 99, 75, 43],
-      Weekly: [120, 150, 130, 170, 200, 180, 160],
-      Monthly: [400, 380, 420, 460, 500, 520, 540],
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+      const loadSession = async() => {
+        const {data: {session}} = await supabase.auth.getSession();
+        if (session?.user) {
+          setCurrentUser(session.user);
+        }
+      };
+      loadSession();
+    }, []);
+
+    // Get transactions - expenses from database
+    useEffect(() => {
+  const fetchTransactions = async () => {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('type', 'expense')
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setTransactions(data || []);
+    }
+  };
+
+  if (isFocused) {
+    fetchTransactions();
+  }
+}, [isFocused, currentUser]);
+
+    // Group transactions by date
+    const parseDate = (dateStr: string) => new Date(dateStr);
+    const weekNumber = (date: Date) => {
+      const start = new Date(date.getFullYear(), 0, 1);
+      const diff = (date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+      return Math.ceil((diff + start.getDay() + 1) / 7);
     };
 
-    const labels: Record<TimeOption, string[]> = {
-      Daily: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      Weekly: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-      Monthly: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+    const groupTransactions = () => {
+      if (selected === 'Daily') {
+        const today = new Date();
+        const last7Days = [...Array(7)].map((_, i) => {
+          const d = new Date(today);
+          d.setDate(today.getDate() - (6-i));
+          return d;
+        });
+
+        const labels = last7Days.map(d => d.toLocaleDateString('en-US', { weekday: 'short'}));
+        const data = last7Days.map( d => {
+          const key= d.toISOString().split('T')[0];
+          return transactions
+            .filter(t => t.date.startsWith(key))
+            .reduce((sum, t) => sum + t.amount, 0);
+        });
+        return {labels, data};
+      }
+
+      if (selected === 'Weekly') {
+        const weekTotals: Record<string, number> = {};
+        transactions.forEach( t => {
+          const week = weekNumber(parseDate(t.date));
+          const label = `W${week}`;
+          weekTotals[label] = (weekTotals[label] || 0) + t.amount;
+        });
+        const labels = Object.keys(weekTotals).slice(-4);
+        const data = labels.map(l => weekTotals[l]);
+        return {labels, data}; 
+      }
+
+      if (selected === 'Monthly') {
+        const monthTotals: Record<string, number> = {};
+        transactions.forEach(t => {
+          const d = parseDate(t.date);
+          const label = d.toLocaleDateString('en-US', {month: 'short'});
+          monthTotals[label] = (monthTotals[label] || 0) + t.amount;
+        });
+        const labels = Object.keys(monthTotals).slice(-6);
+        const data = labels.map(l => monthTotals[l]);
+        return {labels, data};
+      }
+      return {labels: [], data: []}
     };
 
-    const spentTotals = {
-      Daily: 99,
-      Weekly: 200,
-      Monthly: 1200,
-    };
+    const now = new Date();
+    const filteredTransactions = transactions.filter((t) => {
+      const txDate = new Date(t.date);
 
-    // Sample Data
-    const pieData = {
-      Daily: [
-        { name: 'Dining', spending: 40, color: '#D2996C', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        { name: 'Transport', spending: 30, color: '#DAB9A7', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        { name: 'Groceries', spending: 20, color: '#FDB892', legendFontColor: '#3A2A21', legendFontSize: 12 },
-      ],
-      Weekly: [
-        { name: 'Dining', spending: 120, color: '#D2996C', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        { name: 'Transport', spending: 80, color: '#DAB9A7', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        { name: 'Groceries', spending: 60, color: '#FDB892', legendFontColor: '#3A2A21', legendFontSize: 12 },
-      ],
-      Monthly: [
-        { name: 'Dining', spending: 400, color: '#D2996C', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        { name: 'Transport', spending: 300, color: '#DAB9A7', legendFontColor: '#3A2A21', legendFontSize: 12 },
-        { name: 'Groceries', spending: 250, color: '#FDB892', legendFontColor: '#3A2A21', legendFontSize: 12 },
-      ],
-    };
+      if (selected === 'Daily') {
+        return (
+          txDate.getFullYear() === now.getFullYear() &&
+          txDate.getMonth() === now.getMonth() &&
+          txDate.getDate() === now.getDate()
+        );
+      }
 
-    const router = useRouter();
+      if (selected === 'Weekly') {
+        const weekAgo = new Date();
+        weekAgo.setDate(now.getDate() - 7);
+        return txDate >= weekAgo && txDate <= now;
+      }
+
+      if (selected === 'Monthly') {
+        return (
+        txDate.getFullYear() === now.getFullYear() &&
+        txDate.getMonth() === now.getMonth()
+      );
+      }
+      return false;
+    });
+
+    const totalSpent = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const categoryTotals: Record<string, number> = {};
+      filteredTransactions.forEach((t) => {
+      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+    });
+
+    const pieData = Object.keys(categoryTotals).map((category, index) => ({
+      name: category,
+      spending: categoryTotals[category],
+      color: ['#D2996C', '#DAB9A7', '#FDB892', '#C6844F'][index % 4],
+      legendFontColor: '#3A2A21',
+      legendFontSize: 12,
+    }));
+
+    const {labels, data} = groupTransactions();
 
     if (!montserratLoaded || !opensansLoaded) {
         return null;
     }
 
     return (
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         
         {/* Toggle Bar - Daily, Weekly, or Monthly */}
         <View style={styles.bar}>
@@ -87,8 +192,8 @@ export default function ReportScreen() {
       <View style={[styles.subContainer, {paddingLeft: 0, paddingBottom: 0}]}>
       <LineChart
         data={{
-          labels: labels[selected],
-          datasets: [{ data: chartData[selected], strokeWidth: 2 }],
+          labels: labels.length > 0 ? labels : ['No Data'],
+          datasets: [{ data: data.length > 0 ? data : [0], strokeWidth: 2 }],
         }}
         width={screenWidth - 60}
         height={220}
@@ -125,29 +230,40 @@ export default function ReportScreen() {
         <Text style={[styles.text, {
           color: '#D2996C',
           fontSize: 30,
-        }]}>${spentTotals[selected]}</Text>
+        }]}>${totalSpent}</Text>
       </View>
       <View style={styles.subContainer}>
         {/* Top Categories */}
-        <View style={{ flexDirection: 'row', gap: 10}}>
-          <Text style={[styles.text,{color: '#3A2A21', fontSize: 16, paddingVertical: 5}]}>Top Categories:</Text>
-          <Text style={styles.category}>Dining</Text>
-          <Text style={styles.category}>Transportation</Text>
-        </View>
-        <PieChart
-          data={pieData[selected]}
-          width={screenWidth - 32}
+        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+          <Text style={[
+            styles.text,
+            { color: '#3A2A21', fontSize: 16, paddingVertical: 5 }
+          ]}>
+            Top Categories:
+          </Text>
+        {Object.keys(categoryTotals)
+          .sort((a, b) => categoryTotals[b] - categoryTotals[a]) // sort descending
+          .slice(0, 3) // top 3
+          .map((cat) => (
+          <Text key={cat} style={styles.category}>{cat}</Text>
+        ))}
+      </View>
+      <PieChart
+          data={pieData.length > 0 ? pieData : [
+            { name: 'No Data', spending: 1, color: '#E0E0E0', legendFontColor: '#3A2A21', legendFontSize: 12 },
+          ]}
+          width={screenWidth - 60}
           height={220}
           chartConfig={{
             color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
           }}
           accessor="spending"
           backgroundColor="transparent"
-          paddingLeft="16"
+          paddingLeft="0"
           absolute 
         />
       </View>
-    </View>
+    </ScrollView>
     );
 }
 
