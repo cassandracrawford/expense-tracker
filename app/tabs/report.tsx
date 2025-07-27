@@ -20,207 +20,241 @@ type Transaction = {
 type TimeOption = 'Daily' | 'Weekly' | 'Monthly';
 
 export default function ReportScreen() {
-    const [montserratLoaded] = useMontserratFonts({Montserrat_400Regular, Montserrat_700Bold});
-    const [opensansLoaded] = useOpenSansFonts({OpenSans_400Regular, OpenSans_700Bold});
-    
-    const [selected, setSelected] = useState<TimeOption>('Daily');
-    const options: TimeOption[] = ['Daily', 'Weekly', 'Monthly'];
+  const [montserratLoaded] = useMontserratFonts({ Montserrat_400Regular, Montserrat_700Bold });
+  const [opensansLoaded] = useOpenSansFonts({ OpenSans_400Regular, OpenSans_700Bold });
 
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const isFocused = useIsFocused();
+  const [selected, setSelected] = useState<TimeOption>('Daily');
+  const options: TimeOption[] = ['Daily', 'Weekly', 'Monthly'];
 
-    useEffect(() => {
-      const loadSession = async() => {
-        const {data: {session}} = await supabase.auth.getSession();
-        if (session?.user) {
-          setCurrentUser(session.user);
-        }
-      };
-      loadSession();
-    }, []);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const isFocused = useIsFocused();
 
-    // Get transactions - expenses from database
-    useEffect(() => {
-  const fetchTransactions = async () => {
-    if (!currentUser) return;
+  useEffect(() => {
+    const loadSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setCurrentUser(session.user);
+      }
+    };
+    loadSession();
+  }, []);
 
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('type', 'expense')
-      .eq('user_id', currentUser.id)
-      .order('date', { ascending: true });
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!currentUser) return;
 
-    if (error) {
-      console.error(error);
-    } else {
-      setTransactions(data || []);
+      const { data: fetchedTransactions, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('type', 'expense')
+        .eq('user_id', currentUser.id)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error(error);
+      } else {
+        setTransactions(fetchedTransactions || []);
+      }
+    };
+
+    if (isFocused) {
+      fetchTransactions();
     }
+  }, [isFocused, currentUser]);
+
+  const parseDate = (dateStr: string) => new Date(dateStr);
+  const weekNumber = (date: Date) => {
+    const start = new Date(date.getFullYear(), 0, 1);
+    const diff = (date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+    return Math.ceil((diff + start.getDay() + 1) / 7);
   };
 
-  if (isFocused) {
-    fetchTransactions();
-  }
-}, [isFocused, currentUser]);
+  const groupTransactions = () => {
+    if (!transactions.length) return { labels: [], data: [] };
 
-    // Group transactions by date
-    const parseDate = (dateStr: string) => new Date(dateStr);
-    const weekNumber = (date: Date) => {
-      const start = new Date(date.getFullYear(), 0, 1);
-      const diff = (date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-      return Math.ceil((diff + start.getDay() + 1) / 7);
-    };
+    if (selected === 'Daily') {
+      const today = new Date();
+      const last7Days = [...Array(7)].map((_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (6 - i));
+        return d;
+      });
 
-    const groupTransactions = () => {
-      if (selected === 'Daily') {
-        const today = new Date();
-        const last7Days = [...Array(7)].map((_, i) => {
-          const d = new Date(today);
-          d.setDate(today.getDate() - (6-i));
-          return d;
-        });
+      const labels = last7Days.map(d => d.toLocaleDateString('en-US', { weekday: 'short' }));
+      const data = last7Days.map(d => {
+        const key = d.toISOString().split('T')[0];
+        return transactions
+          .filter(t => t.date.startsWith(key))
+          .reduce((sum, t) => sum + t.amount, 0);
+      });
+      return { labels, data };
+    }
 
-        const labels = last7Days.map(d => d.toLocaleDateString('en-US', { weekday: 'short'}));
-        const data = last7Days.map( d => {
-          const key= d.toISOString().split('T')[0];
-          return transactions
-            .filter(t => t.date.startsWith(key))
-            .reduce((sum, t) => sum + t.amount, 0);
-        });
-        return {labels, data};
-      }
+    if (selected === 'Weekly') {
+      const weekTotals: Record<string, number> = {};
+      transactions.forEach(t => {
+        const week = weekNumber(parseDate(t.date));
+        const label = `W${week}`;
+        weekTotals[label] = (weekTotals[label] || 0) + t.amount;
+      });
+      const labels = Object.keys(weekTotals).slice(-4);
+      const data = labels.map(l => weekTotals[l]);
+      return { labels, data };
+    }
 
-      if (selected === 'Weekly') {
-        const weekTotals: Record<string, number> = {};
-        transactions.forEach( t => {
-          const week = weekNumber(parseDate(t.date));
-          const label = `W${week}`;
-          weekTotals[label] = (weekTotals[label] || 0) + t.amount;
-        });
-        const labels = Object.keys(weekTotals).slice(-4);
-        const data = labels.map(l => weekTotals[l]);
-        return {labels, data}; 
-      }
+    if (selected === 'Monthly') {
+      const monthTotals: Record<string, number> = {};
+      transactions.forEach(t => {
+        const d = parseDate(t.date);
+        const label = d.toLocaleDateString('en-US', { month: 'short' });
+        monthTotals[label] = (monthTotals[label] || 0) + t.amount;
+      });
+      const labels = Object.keys(monthTotals).slice(-6);
+      const data = labels.map(l => monthTotals[l]);
+      return { labels, data };
+    }
 
-      if (selected === 'Monthly') {
-        const monthTotals: Record<string, number> = {};
-        transactions.forEach(t => {
-          const d = parseDate(t.date);
-          const label = d.toLocaleDateString('en-US', {month: 'short'});
-          monthTotals[label] = (monthTotals[label] || 0) + t.amount;
-        });
-        const labels = Object.keys(monthTotals).slice(-6);
-        const data = labels.map(l => monthTotals[l]);
-        return {labels, data};
-      }
-      return {labels: [], data: []}
-    };
+    return { labels: [], data: [] };
+  };
 
-    const now = new Date();
-    const filteredTransactions = transactions.filter((t) => {
-      const txDate = new Date(t.date);
+  const now = new Date();
+  const filteredTransactions = transactions.filter((t) => {
+    const txDate = new Date(t.date);
 
-      if (selected === 'Daily') {
-        return (
-          txDate.getFullYear() === now.getFullYear() &&
-          txDate.getMonth() === now.getMonth() &&
-          txDate.getDate() === now.getDate()
-        );
-      }
+    if (selected === 'Daily') {
+      return (
+        txDate.getFullYear() === now.getFullYear() &&
+        txDate.getMonth() === now.getMonth() &&
+        txDate.getDate() === now.getDate()
+      );
+    }
 
-      if (selected === 'Weekly') {
-        const weekAgo = new Date();
-        weekAgo.setDate(now.getDate() - 7);
-        return txDate >= weekAgo && txDate <= now;
-      }
+    if (selected === 'Weekly') {
+      const weekAgo = new Date();
+      weekAgo.setDate(now.getDate() - 7);
+      return txDate >= weekAgo && txDate <= now;
+    }
 
-      if (selected === 'Monthly') {
-        return (
+    if (selected === 'Monthly') {
+      return (
         txDate.getFullYear() === now.getFullYear() &&
         txDate.getMonth() === now.getMonth()
       );
-      }
-      return false;
-    });
-
-    const totalSpent = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const categoryTotals: Record<string, number> = {};
-      filteredTransactions.forEach((t) => {
-      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-    });
-
-    const pieData = Object.keys(categoryTotals).map((category, index) => ({
-      name: category,
-      spending: categoryTotals[category],
-      color: ['#D2996C', '#DAB9A7', '#FDB892', '#C6844F'][index % 4],
-      legendFontColor: '#3A2A21',
-      legendFontSize: 12,
-    }));
-
-    const {labels, data} = groupTransactions();
-
-    if (!montserratLoaded || !opensansLoaded) {
-        return null;
     }
 
-    return (
-      <ScrollView style={styles.container}>
-        
-        {/* Toggle Bar - Daily, Weekly, or Monthly */}
-        <View style={styles.bar}>
-          {options.map((option) => (
-            <TouchableOpacity
+    return false;
+  });
+
+  const totalSpent = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const categoryTotals: Record<string, number> = {};
+  filteredTransactions.forEach((t) => {
+    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+  });
+
+  const pieData = Object.keys(categoryTotals).map((category, index) => ({
+    name: category,
+    spending: categoryTotals[category],
+    color: ['#D2996C', '#DAB9A7', '#FDB892', '#C6844F'][index % 4],
+    legendFontColor: '#3A2A21',
+    legendFontSize: 12,
+  }));
+
+  const { labels, data } = groupTransactions();
+
+  useEffect(() => {
+    const insertSpendingNotification = async () => {
+      if (!currentUser || totalSpent <= 0) return;
+
+      const message = `You spent $${totalSpent.toFixed(2)} this ${selected.toLowerCase()}.`;
+      const today = new Date().toISOString().split("T")[0];
+
+      const { data: existing, error: fetchError } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .eq("type", "report")
+        .gte("created_at", today + "T00:00:00.000Z");
+
+      if (fetchError) {
+        console.error("❌ Error checking existing notifications:", fetchError.message);
+        return;
+      }
+
+      if (existing && existing.length > 0) return;
+
+      const { error } = await supabase.from("notifications").insert([
+        {
+          user_id: currentUser.id,
+          message,
+          type: "report",
+          is_read: false,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error("❌ Failed to insert notification:", error.message);
+      }
+    };
+
+    insertSpendingNotification();
+  }, [totalSpent, selected, currentUser]);
+
+  if (!montserratLoaded || !opensansLoaded) return null;
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Toggle Bar */}
+      <View style={styles.bar}>
+        {options.map((option) => (
+          <TouchableOpacity
             key={option}
-            style={[
-            styles.button,
-            selected === option && styles.selectedButton,
-            ]}
+            style={[styles.button, selected === option && styles.selectedButton]}
             onPress={() => setSelected(option)}
           >
-          <Text
-            style={[
-              styles.buttonText,
-              selected === option && styles.selectedText,
-            ]}
-          >
-            {option}
-          </Text>
+            <Text style={[styles.buttonText, selected === option && styles.selectedText]}>
+              {option}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
-      <View style={[styles.subContainer, {paddingLeft: 0, paddingBottom: 0}]}>
-      <LineChart
-        data={{
-          labels: labels.length > 0 ? labels : ['No Data'],
-          datasets: [{ data: data.length > 0 ? data : [0], strokeWidth: 2 }],
-        }}
-        width={screenWidth - 60}
-        height={220}
-        chartConfig={{
-          backgroundColor: '#F5E5DC',
-          backgroundGradientFrom: '#F5E5DC',
-          backgroundGradientTo: '#F5E5DC',
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`, 
-          labelColor: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
-          propsForDots: {
-            r: '4',
-            strokeWidth: '2',
-            stroke: '#B7A690',
-          },
-        }}
-        bezier
-        style={{
-          marginVertical: 8,
-          borderRadius: 16,
-          marginHorizontal: 0,
-        }}
-      />
+
+      {/* Line Chart */}
+      <View style={[styles.subContainer, { paddingLeft: 0, paddingBottom: 0 }]}>
+        <LineChart
+          data={{
+            labels: labels.length > 0 ? labels : ['No Data'],
+            datasets: [{ data: data.length > 0 ? data : [0], strokeWidth: 2 }],
+          }}
+          width={screenWidth - 60}
+          height={220}
+          chartConfig={{
+            backgroundColor: '#F5E5DC',
+            backgroundGradientFrom: '#F5E5DC',
+            backgroundGradientTo: '#F5E5DC',
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
+            propsForDots: {
+              r: '4',
+              strokeWidth: '2',
+              stroke: '#B7A690',
+            },
+          }}
+          bezier
+          style={{
+            marginVertical: 8,
+            borderRadius: 16,
+            marginHorizontal: 0,
+          }}
+        />
       </View>
-      <View style={[styles.subContainer, {alignItems: 'center', justifyContent: 'center'}]}>
+
+      {/* Total Spent Display */}
+      <View style={[styles.subContainer, { alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={[styles.text, {
-          color: '#3A2A21', 
+          color: '#3A2A21',
           textTransform: 'uppercase',
           lineHeight: 20,
           fontSize: 16,
@@ -230,28 +264,30 @@ export default function ReportScreen() {
         <Text style={[styles.text, {
           color: '#D2996C',
           fontSize: 30,
-        }]}>${totalSpent}</Text>
+        }]}>${totalSpent.toFixed(2)}</Text>
       </View>
+
+      {/* Pie Chart + Top Categories */}
       <View style={styles.subContainer}>
-        {/* Top Categories */}
         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          <Text style={[
-            styles.text,
-            { color: '#3A2A21', fontSize: 16, paddingVertical: 5 }
-          ]}>
+          <Text style={[styles.text, { color: '#3A2A21', fontSize: 16, paddingVertical: 5 }]}>
             Top Categories:
           </Text>
-        {Object.keys(categoryTotals)
-          .sort((a, b) => categoryTotals[b] - categoryTotals[a]) // sort descending
-          .slice(0, 3) // top 3
-          .map((cat) => (
-          <Text key={cat} style={styles.category}>{cat}</Text>
-        ))}
-      </View>
-      <PieChart
-          data={pieData.length > 0 ? pieData : [
-            { name: 'No Data', spending: 1, color: '#E0E0E0', legendFontColor: '#3A2A21', legendFontSize: 12 },
-          ]}
+          {Object.keys(categoryTotals)
+            .sort((a, b) => categoryTotals[b] - categoryTotals[a])
+            .slice(0, 3)
+            .map((cat) => (
+              <Text key={cat} style={styles.category}>{cat}</Text>
+            ))}
+        </View>
+        <PieChart
+          data={pieData.length > 0 ? pieData : [{
+            name: 'No Data',
+            spending: 1,
+            color: '#E0E0E0',
+            legendFontColor: '#3A2A21',
+            legendFontSize: 12,
+          }]}
           width={screenWidth - 60}
           height={220}
           chartConfig={{
@@ -260,13 +296,12 @@ export default function ReportScreen() {
           accessor="spending"
           backgroundColor="transparent"
           paddingLeft="0"
-          absolute 
+          absolute
         />
       </View>
     </ScrollView>
-    );
+  );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

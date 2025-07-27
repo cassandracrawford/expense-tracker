@@ -243,7 +243,7 @@ export default function CardsScreen() {
           shadowRadius: 3,
           elevation: 2
         }}>
-          Add a transaction to see your chart!
+          Add a transaction to see your chart.
         </Text>
       </View>
     )}
@@ -307,7 +307,7 @@ export default function CardsScreen() {
             shadowRadius: 3,
             elevation: 2
           }}>
-            You haven’t added any cards yet.
+            No cards added.
           </Text>
         </View>
       )}
@@ -355,7 +355,7 @@ export default function CardsScreen() {
       shadowRadius: 3,
       elevation: 2
     }}>
-      No cash expenses yet. Add a transaction to see it here!
+      No cash transactions.
     </Text>
   </View>
 )}

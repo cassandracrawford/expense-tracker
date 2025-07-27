@@ -53,8 +53,6 @@ export default function TransactionList({ transactions }: TransactionsProps) {
         </View>
       </View>
 
-      <ReminderCard />
-
       <Text style={[styles.transactionsTitle, { marginTop: 15 }]}>Recent Transactions</Text>
 
       {transactions.length === 0 ? (
@@ -80,15 +78,6 @@ export default function TransactionList({ transactions }: TransactionsProps) {
           </View>
         ))
       )}
-    </View>
-  );
-}
-
-export function ReminderCard() {
-  return (
-    <View style={styles.cardReminders}>
-      <Text style={styles.remindersTextTitle}>NO REMINDERS</Text>
-      <Text style={styles.remindersSubTitle}>Due Today</Text>
     </View>
   );
 }
@@ -203,24 +192,5 @@ const styles = StyleSheet.create({
   amountStyle: {
     fontFamily: 'Montserrat_700Bold',
     fontSize: 14,
-  },
-  cardReminders: {
-    height: 75,
-    backgroundColor: '#FFFFFF',
-    marginTop: 20,
-    borderRadius: 10,
-    padding: 15,
-    justifyContent: 'center',
-  },
-  remindersTextTitle: {
-    fontFamily: 'Montserrat_700Bold',
-    fontSize: 16,
-    textTransform: 'uppercase',
-    color: '#5C4630',
-  },
-  remindersSubTitle: {
-    fontFamily: 'Montserrat_400Regular',
-    fontSize: 14,
-    color: '#5C4630',
   },
 });

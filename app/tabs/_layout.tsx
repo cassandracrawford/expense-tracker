@@ -5,6 +5,9 @@ import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bo
 import { useEffect, useState } from 'react';
 import * as Linking from 'expo-linking';
 import NotificationPanel from '@/components/notificationModal';
+import NotificationBell from '@/components/notificationbell';
+import supabase from '@/lib/supabase';
+
 
 export default function TabsLayout() {
   const [showOverlay, setShowOverlay] = useState(false);
@@ -14,6 +17,15 @@ export default function TabsLayout() {
   });
 
   const [isNotifVisible, setNotifVisible] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const user = await supabase.auth.getUser();
+      setUserId(user.data?.user?.id || null);
+    };
+
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
     const sub = Linking.addEventListener('url', ({ url }) => {
@@ -57,12 +69,13 @@ export default function TabsLayout() {
           },
           headerTitle: '',
           headerRight: () => (
-            <Pressable
-              onPress={() => setNotifVisible(true)}
-              style={{ marginRight: 16 }}
-            >
-              <MaterialCommunityIcons name="bell" size={20} color="#C6844F" />
-            </Pressable>
+            userId ? (
+              <NotificationBell userId={userId} onPress={() => setNotifVisible(true)} />
+            ) : (
+              <Pressable onPress={() => setNotifVisible(true)} style={{ marginRight: 16 }}>
+                <MaterialCommunityIcons name="bell" size={20} color="#C6844F" />
+              </Pressable>
+            )
           ),
           tabBarIcon: ({ color }) =>
             route.name === 'add' ? null : (
@@ -103,6 +116,7 @@ export default function TabsLayout() {
       <NotificationPanel
         isVisible={isNotifVisible}
         onClose={() => setNotifVisible(false)}
+        userId={userId}
       />
 
       {showOverlay && (

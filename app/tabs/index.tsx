@@ -20,9 +20,11 @@ import { Link } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import supabase from '../../lib/supabase';
-import { DonutChart, ReminderCard } from '../../components/dashboardComponents';
+import { DonutChart } from '../../components/dashboardComponents';
 import TransactionList, { TransactionItem } from '../../components/TransactionList';
 import { useUserFinanceData } from '../../hooks/useUserFinanceData'; 
+import ReminderCard from '../../components/remindercard';
+
 
 export default function Dashboard() {
   const [montserratLoaded] = useMontserratFonts({
