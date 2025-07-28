@@ -53,7 +53,7 @@ export function useUserGoalData(): GoalData {
     // Fetch goals + savings using join
     const { data: goals, error } = await supabase
       .from('goals')
-      .select('id, name, target_amount, target_date, savings(amount)')
+      .select('id, name, target_amount, target_date, start_amount, savings(amount)')
       .eq('user_id', userId);
 
     if (error) {
@@ -61,13 +61,13 @@ export function useUserGoalData(): GoalData {
       return;
     }
 
-    const enrichedGoals: GoalItem[] = (goals || []).map((goal: any) => ({
-      id: goal.id,
-      name: goal.name,
-      target_amount: goal.target_amount,
-      target_date: goal.target_date,
-      start_amount: goal.savings?.reduce((sum: number, s: any) => sum + (s.amount || 0), 0) || 0,
-    }));
+const enrichedGoals: GoalItem[] = (goals || []).map((goal: any) => ({
+  id: goal.id,
+  name: goal.name,
+  target_amount: goal.target_amount,
+  target_date: goal.target_date,
+  start_amount: (goal.start_amount ?? 0) + (goal.savings?.reduce((sum: number, s: any) => sum + (s.amount || 0), 0) || 0),
+}));
 
     const totalSavings = enrichedGoals.reduce((sum, g) => sum + g.start_amount, 0);
     const totalSavingsGoal = enrichedGoals.reduce((sum, g) => sum + g.target_amount, 0);

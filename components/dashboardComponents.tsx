@@ -1,32 +1,19 @@
 import { Text, View, StyleSheet, Dimensions } from 'react-native';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Svg, { G, Circle } from 'react-native-svg';
 import { useUserFinanceData } from '../hooks/useUserFinanceData';
-
-interface TransactionItem {
-  id: string;
-  icon?: string;
-  type: string;
-  date: string;
-  amount: number;
-  isIncome: boolean;
-}
-
-interface TransactionsProps {
-  transactions: TransactionItem[];
-}
+import Svg, { G, Circle } from 'react-native-svg';
+import TransactionList from './TransactionList'; 
 
 const screenWidth = Dimensions.get('window').width;
 
-export default function TransactionList({ transactions }: TransactionsProps) {
+export default function DashboardComponents() {
   const [montserratLoaded] = useMontserratFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
     Montserrat_700Bold,
   });
 
-  const { totalBudget, totalSpent, percentageUsed } = useUserFinanceData();
+  const { totalBudget, totalSpent, percentageUsed, transactions, refresh } = useUserFinanceData(); 
 
   if (!montserratLoaded) {
     return null;
@@ -55,29 +42,7 @@ export default function TransactionList({ transactions }: TransactionsProps) {
 
       <Text style={[styles.transactionsTitle, { marginTop: 15 }]}>Recent Transactions</Text>
 
-      {transactions.length === 0 ? (
-        <View>
-          <Text style={styles.transactionsSubtitle}>Your recent transactions will show here.</Text>
-        </View>
-      ) : (
-        transactions.map((item: TransactionItem) => (
-          <View key={item.id} style={styles.transactionsRow}>
-            <MaterialCommunityIcons
-              name={item.icon as keyof typeof MaterialCommunityIcons.glyphMap}
-              size={24}
-              color="#5C4630"
-              style={{ marginRight: 10 }}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.transactionsTitle}>{item.type}</Text>
-              <Text style={styles.transactionsSubtitle}>{item.date}</Text>
-            </View>
-            <Text style={[styles.amountStyle, { color: item.isIncome ? 'green' : 'red' }]}>
-              {item.isIncome ? '+' : '-'} ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-        ))
-      )}
+      <TransactionList transactions={transactions} onDeleteComplete={refresh} />
     </View>
   );
 }
@@ -177,20 +142,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat_700Bold',
     color: '#3A2A21',
     fontSize: 16,
-  },
-  transactionsSubtitle: {
-    fontFamily: 'Montserrat_400Regular',
-    color: '#5C4630',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  transactionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  amountStyle: {
-    fontFamily: 'Montserrat_700Bold',
-    fontSize: 14,
   },
 });

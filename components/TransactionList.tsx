@@ -1,5 +1,7 @@
 import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import supabase from '../lib/supabase';
 
 export type TransactionItem = {
   id: string;
@@ -12,9 +14,20 @@ export type TransactionItem = {
 
 type Props = {
   transactions: TransactionItem[];
+  onDeleteComplete?: () => void;
 };
 
-const TransactionList = ({ transactions }: Props) => {
+const TransactionList = ({ transactions, onDeleteComplete }: Props) => {
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) {
+      Alert.alert('Delete failed', error.message);
+    } else {
+      Alert.alert('Transaction deleted');
+      onDeleteComplete?.(); // optional refresh trigger
+    }
+  };
+
   const renderItem = ({ item }: { item: TransactionItem }) => {
     const label = item.category || item.type;
     const color = item.isIncome ? '#3A8131' : '#D9534F';
@@ -26,19 +39,24 @@ const TransactionList = ({ transactions }: Props) => {
           <Text style={styles.label}>{label}</Text>
           <Text style={styles.date}>{item.date}</Text>
         </View>
-        <Text style={[styles.amount, { color }]}>
-          {sign} ${item.amount.toFixed(2)}
-        </Text>
+        <View style={styles.rightSection}>
+          <Text style={[styles.amount, { color }]}>
+            {sign} ${item.amount.toFixed(2)}
+          </Text>
+          <TouchableOpacity onPress={() => handleDelete(item.id)}>
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#A35C5C" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
 
   return (
     <FlatList
-      data={transactions.slice(0, 4)} 
+      data={transactions.slice(0, 4)}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
-      scrollEnabled={false} 
+      scrollEnabled={false}
     />
   );
 };
@@ -63,6 +81,11 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 16,
     fontFamily: 'Montserrat_700Bold',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
 });
 
