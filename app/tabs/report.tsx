@@ -1,8 +1,7 @@
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { useFonts as useOpenSansFonts, OpenSans_400Regular, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
-import { LineChart } from 'react-native-chart-kit';
-import { PieChart } from 'react-native-chart-kit';
+import { LineChart, PieChart } from 'react-native-chart-kit';
 import { useEffect, useState } from 'react';
 import supabase from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -11,6 +10,7 @@ import { useIsFocused } from '@react-navigation/native';
 const screenWidth = Dimensions.get('window').width;
 
 type Transaction = {
+  id: string;
   type: string;
   amount: number;
   category: string;
@@ -30,6 +30,33 @@ export default function ReportScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const isFocused = useIsFocused();
 
+  const fetchTransactions = async () => {
+    if (!currentUser) return;
+
+    const { data: fetchedTransactions, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('type', 'expense')
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setTransactions(fetchedTransactions || []);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) {
+      Alert.alert('Delete failed', error.message);
+    } else {
+      Alert.alert('Deleted!');
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+    }
+  };
+
   useEffect(() => {
     const loadSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -41,23 +68,6 @@ export default function ReportScreen() {
   }, []);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!currentUser) return;
-
-      const { data: fetchedTransactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('type', 'expense')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: true });
-
-      if (error) {
-        console.error(error);
-      } else {
-        setTransactions(fetchedTransactions || []);
-      }
-    };
-
     if (isFocused) {
       fetchTransactions();
     }
@@ -73,11 +83,12 @@ export default function ReportScreen() {
   const groupTransactions = () => {
     if (!transactions.length) return { labels: [], data: [] };
 
+    const now = new Date();
+
     if (selected === 'Daily') {
-      const today = new Date();
       const last7Days = [...Array(7)].map((_, i) => {
-        const d = new Date(today);
-        d.setDate(today.getDate() - (6 - i));
+        const d = new Date(now);
+        d.setDate(now.getDate() - (6 - i));
         return d;
       });
 
@@ -205,7 +216,7 @@ export default function ReportScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Toggle Bar */}
+      {/* Toggle */}
       <View style={styles.bar}>
         {options.map((option) => (
           <TouchableOpacity
@@ -220,12 +231,12 @@ export default function ReportScreen() {
         ))}
       </View>
 
-      {/* Line Chart */}
-      <View style={[styles.subContainer, { paddingLeft: 0, paddingBottom: 0 }]}>
+      {/* Charts */}
+      <View style={styles.subContainer}>
         <LineChart
           data={{
             labels: labels.length > 0 ? labels : ['No Data'],
-            datasets: [{ data: data.length > 0 ? data : [0], strokeWidth: 2 }],
+            datasets: [{ data: data.length > 0 ? data : [0] }],
           }}
           width={screenWidth - 60}
           height={220}
@@ -235,44 +246,21 @@ export default function ReportScreen() {
             backgroundGradientTo: '#F5E5DC',
             decimalPlaces: 0,
             color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
-            propsForDots: {
-              r: '4',
-              strokeWidth: '2',
-              stroke: '#B7A690',
-            },
+            labelColor: () => '#5C4630',
           }}
           bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16,
-            marginHorizontal: 0,
-          }}
+          style={{ borderRadius: 16 }}
         />
       </View>
 
-      {/* Total Spent Display */}
-      <View style={[styles.subContainer, { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={[styles.text, {
-          color: '#3A2A21',
-          textTransform: 'uppercase',
-          lineHeight: 20,
-          fontSize: 16,
-        }]}>
-          Total Spent {selected}
-        </Text>
-        <Text style={[styles.text, {
-          color: '#D2996C',
-          fontSize: 30,
-        }]}>${totalSpent.toFixed(2)}</Text>
+      <View style={styles.subContainer}>
+        <Text style={[styles.text, { fontSize: 16 }]}>Total Spent {selected}</Text>
+        <Text style={[styles.text, { fontSize: 30, color: '#D2996C' }]}>${totalSpent.toFixed(2)}</Text>
       </View>
 
-      {/* Pie Chart + Top Categories */}
       <View style={styles.subContainer}>
-        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          <Text style={[styles.text, { color: '#3A2A21', fontSize: 16, paddingVertical: 5 }]}>
-            Top Categories:
-          </Text>
+        <Text style={[styles.text, { fontSize: 16 }]}>Top Categories:</Text>
+        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginVertical: 10 }}>
           {Object.keys(categoryTotals)
             .sort((a, b) => categoryTotals[b] - categoryTotals[a])
             .slice(0, 3)
@@ -290,64 +278,85 @@ export default function ReportScreen() {
           }]}
           width={screenWidth - 60}
           height={220}
-          chartConfig={{
-            color: (opacity = 1) => `rgba(90, 69, 50, ${opacity})`,
-          }}
+          chartConfig={{ color: () => '#5C4630' }}
           accessor="spending"
           backgroundColor="transparent"
           paddingLeft="0"
           absolute
         />
       </View>
+
+      {/* Transactions + Delete */}
+      <View style={styles.subContainer}>
+        <Text style={[styles.text, { color: '#3A2A21', fontSize: 16, marginBottom: 10 }]}>
+          Recent Transactions:
+        </Text>
+        {filteredTransactions.map((t) => (
+          <View key={t.id} style={{ marginBottom: 10, backgroundColor: '#fff', padding: 10, borderRadius: 10 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Montserrat_700Bold', color: '#3A2A21' }}>
+              {t.category} - ${t.amount.toFixed(2)}
+            </Text>
+            <Text style={{ fontSize: 14, fontFamily: 'OpenSans_400Regular', color: '#5C4630' }}>
+              {t.date.split('T')[0]}
+            </Text>
+            <TouchableOpacity
+              style={{
+                marginTop: 5,
+                backgroundColor: '#D9534F',
+                paddingVertical: 5,
+                borderRadius: 5,
+                alignSelf: 'flex-start',
+                paddingHorizontal: 10,
+              }}
+              onPress={() => handleDelete(t.id)}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF8F2',
     paddingHorizontal: 16,
-    paddingTop: 0,
   },
   bar: {
     flexDirection: 'row',
-    backgroundColor: '#f3e5d8', // light tan bg
+    backgroundColor: '#f3e5d8',
     borderRadius: 10,
-    padding: 0,
-    alignSelf: 'flex-start',
-    width: '100%',
     marginVertical: 10,
   },
   button: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 10,
   },
   selectedButton: {
-    flex: 1,
-    backgroundColor: '#C3905E', 
+    backgroundColor: '#C3905E',
   },
   buttonText: {
-    color: '#3C2B1C', 
-    fontWeight: 'bold',
     fontSize: 18,
     fontFamily: 'Montserrat_700Bold',
+    color: '#3C2B1C',
   },
   selectedText: {
-    color: 'white',
+    color: '#FFF',
   },
   subContainer: {
     backgroundColor: '#F5E5DC',
     marginVertical: 8,
-    minHeight: 100,
     borderRadius: 20,
     padding: 20,
   },
   text: {
     fontFamily: 'Montserrat_700Bold',
+    color: '#3A2A21',
   },
   category: {
     backgroundColor: '#D2996C',
@@ -356,5 +365,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'Montserrat_700Bold',
     borderRadius: 10,
-  }
+  },
 });
