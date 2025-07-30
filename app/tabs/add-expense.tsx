@@ -65,13 +65,17 @@ export default function AddExpenseScreen() {
     { label: 'Yearly', value: 'Yearly' },
   ]);
 
-  const handleSaveExpense = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
+const handleSaveExpense = async () => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    Alert.alert('Error', 'User not authenticated.');
+    return;
+  }
 
-  const { data, error } = await supabase
-  .from('transactions')
-  .insert([{
-    amount: parseFloat(amount),
+  const expenseAmount = parseFloat(amount);
+
+  const { error: insertError } = await supabase.from('transactions').insert([{
+    amount: expenseAmount,
     date: date.toISOString(),
     description,
     category: categoryValue,
@@ -79,20 +83,58 @@ export default function AddExpenseScreen() {
     type: 'expense',
     is_recurring: true,
     recurrence_frequency: recurrence,
-    user_id: user?.id,
+    user_id: user.id,
     card_id: selectedCardId,
-
   }]);
 
-  if (error) {
-    console.error('❌ Supabase insert error:', error);
-    Alert.alert('Error', 'Failed to save expense');
-  } else {
-    Alert.alert('✅ Expense saved!', '', [
-      { text: 'OK', onPress: () => router.replace('/tabs') }
-    ]);
+  if (insertError) {
+    console.error('❌ Insert transaction error:', insertError.message);
+    Alert.alert('Error', 'Failed to save expense.');
+    return;
   }
+
+  if (selectedCardId) {
+    const { data: cardData, error: cardError } = await supabase
+      .from('cards')
+      .select('balance, spending_limit, user_id, name')
+      .eq('id', selectedCardId)
+      .single();
+
+    if (cardError || !cardData) {
+      console.error('❌ Fetch card error:', cardError?.message);
+      Alert.alert('Error', 'Unable to retrieve card info.');
+      return;
+    }
+
+    const originalBalance = parseFloat(cardData.balance);
+    const newBalance = originalBalance + expenseAmount;
+
+    const { error: updateError } = await supabase
+      .from('cards')
+      .update({ balance: newBalance })
+      .eq('id', selectedCardId);
+
+    if (updateError) {
+      console.error('Update card balance error:', updateError.message);
+      Alert.alert('Error', 'Failed to update card balance.');
+    } else {
+      console.log(`Updated "${cardData.name}" balance: ${originalBalance} + ${expenseAmount} = ${newBalance}`);
+    }
+
+    if (newBalance > cardData.spending_limit) {
+      await supabase.from('notifications').insert({
+        user_id: cardData.user_id,
+        message: `Your card "${cardData.name}" has exceeded its spending limit.`,
+      });
+    }
+  }
+
+  Alert.alert('✅ Expense saved!', '', [
+    { text: 'OK', onPress: () => router.replace('/tabs') }
+  ]);
 };
+
+
  const fetchCards = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;

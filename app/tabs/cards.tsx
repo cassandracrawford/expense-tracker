@@ -10,6 +10,7 @@ import { PieChart } from 'react-native-chart-kit';
 import CreditCard from '@/components/cardComponent';
 import AddNewCardModal from '@/components/addNewCardModal';
 import { FlatList, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { Alert } from 'react-native';
 import { useRef } from 'react';
 
 
@@ -159,6 +160,55 @@ export default function CardsScreen() {
   }
   const hasExpense = transactions.some(t => t.type === 'expense');
 
+  const handleDeleteCard = (cardId: string, cardName: string) => {
+  Alert.alert(
+    'Delete Card',
+    `Are you sure you want to delete the card "${cardName}"?\nAll associated transactions will also be deleted.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error: txError } = await supabase
+              .from('transactions')
+              .delete()
+              .eq('card_id', cardId);
+
+            if (txError) {
+              console.error('❌ Failed to delete transactions:', txError.message);
+              Alert.alert('Error', 'Failed to delete related transactions.');
+              return;
+            }
+
+            const { error: cardError } = await supabase
+              .from('cards')
+              .delete()
+              .eq('id', cardId);
+
+            if (cardError) {
+              console.error('❌ Failed to delete card:', cardError.message);
+              Alert.alert('Error', 'Failed to delete card.');
+              return;
+            }
+
+            await fetchCards();
+            await fetchTransactions();
+            setSelectedCardId(null);
+
+            Alert.alert('✅ Deleted', `Card "${cardName}" and related data were removed.`);
+          } catch (err) {
+            console.error('❌ Unexpected error:', err);
+            Alert.alert('Error', 'Something went wrong.');
+          }
+        }
+      }
+    ]
+  );
+};
+
+
   return (
     <View style={styles.container}>
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
@@ -284,6 +334,20 @@ export default function CardsScreen() {
                     cardDueDate={item.due_date}
                     cardType={item.type}
                   />
+                  <TouchableOpacity
+  style={{
+    marginTop: 10,
+    alignSelf: 'flex-end',
+    backgroundColor: '#E65C5C',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8
+  }}
+  onPress={() => handleDeleteCard(item.id, item.name)}
+>
+  <Text style={{ color: 'white', fontWeight: 'bold' }}>Delete</Text>
+</TouchableOpacity>
+
                 </View>
               </View>
             );
