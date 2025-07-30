@@ -59,7 +59,7 @@ export default function Dashboard() {
       .maybeSingle();
 
     if (fetchError) {
-      console.error('❌ Failed to check users table:', fetchError.message);
+      console.error('Failed to check users table:', fetchError.message);
       return;
     }
 
@@ -76,12 +76,12 @@ export default function Dashboard() {
       ]);
 
       if (insertError) {
-        console.error('❌ Failed to insert user row:', insertError.message);
+        console.error(' Failed to insert user row:', insertError.message);
       } else {
-        console.log('✅ User row inserted successfully');
+        console.log(' User row inserted successfully');
       }
     } else {
-      console.log('✅ User row already exists');
+      console.log('User row already exists');
     }
   };
 
@@ -93,7 +93,7 @@ export default function Dashboard() {
       .order('date', { ascending: false });
 
     if (error) {
-      console.error('❌ Error fetching transactions:', error.message);
+      console.error('Error fetching transactions:', error.message);
       return;
     }
 
@@ -113,7 +113,7 @@ export default function Dashboard() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('❌ Auth error:', authError?.message || 'No user');
+        console.error('Auth error:', authError?.message || 'No user');
         return;
       }
 
@@ -130,12 +130,12 @@ export default function Dashboard() {
       fetchTransactions(user.id);
 
       if (!data) {
-        console.warn('⚠️ No user row found, falling back to metadata');
+        console.warn(' No user row found, falling back to metadata');
       } else if (error) {
-        console.error('❌ Error fetching full_name:', error?.message);
+        console.error('Error fetching full_name:', error?.message);
       }
     } catch (e) {
-      console.error('❌ Unexpected error:', e);
+      console.error('Unexpected error:', e);
     }
   }, []);
 

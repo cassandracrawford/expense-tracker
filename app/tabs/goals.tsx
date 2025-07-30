@@ -43,7 +43,7 @@ export default function GoalScreen() {
   const savingsProgress = totalSavingsGoal > 0 ? Math.min(totalSavings / totalSavingsGoal, 1) : 0;
 
   const handleDeleteGoal = async (id: string) => {
-    console.log('🗑️ Try deleting goal:', id);
+    console.log('Try deleting goal:', id);
     const { error } = await supabase.from('goals').delete().eq('id', id);
     if (error) {
       console.error('Failed to delete goal:', error.message);
@@ -64,7 +64,7 @@ export default function GoalScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* 💰 Total Budget Section */}
+      {/* Total Budget Section */}
       <View style={styles.subContainer}>
         <View style={styles.headerRow}>
           <Text style={styles.containerTitle}>Total Budget</Text>
@@ -77,7 +77,7 @@ export default function GoalScreen() {
         <Text style={styles.containterSubTitle}>Total budget set this month.</Text>
       </View>
 
-      {/* 🏦 Total Savings Section */}
+      {/* Total Savings Section */}
       <View style={[styles.subContainer, { marginBottom: 20 }]}>
         <View style={styles.headerRow}>
           <Text style={styles.containerTitle}>Total Savings</Text>
@@ -90,7 +90,7 @@ export default function GoalScreen() {
         <Text style={styles.containterSubTitle}>{activeGoalsCount} active goals.</Text>
       </View>
 
-      {/* 📊 Monthly Budget Card */}
+      {/* Monthly Budget Card */}
       <View style={{ position: 'relative', marginBottom: 10 }}>
         <Pressable style={styles.fab} onPress={() => setModalBudgetVisible(true)}>
           <Text style={styles.fabText}>+ Add Budget</Text>
