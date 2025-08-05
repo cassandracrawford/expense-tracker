@@ -28,6 +28,8 @@ export default function RegisterScreen() {
   return emailRegex.test(email);
   };
 
+  if (isSubmitting) return;
+
   const handleRegister = async () => {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
@@ -51,52 +53,64 @@ export default function RegisterScreen() {
 
     setIsSubmitting(true);
 
-try {
-  const { data, error } = await supabase.auth.signUp({
-    email: trimmedEmail,
-    password: trimmedPassword,
-    options: {
-      emailRedirectTo: redirectUrl,
-      data: {
-        full_name: trimmedName,
-      },
-    },
-  });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: trimmedPassword,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: trimmedName,
+          },
+        },
+      });
 
-  if (error) {
-    console.error('Sign Up Error:', error.message);
-    Alert.alert('Registration Error', error.message);
-    return;
-  }
+      if (error) {
+        console.error('Sign Up Error:', error.message);
+        Alert.alert('Registration Error', 'Could not sign you up. Please check your email or try again later.');
+        return;
+      }
 
-  const userId = data.user?.id;
-  if (userId) {
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert({ id: userId, full_name: trimmedName, email: trimmedEmail, });
+      const userId = data.user?.id;
+      if (userId) {
+        const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (insertError) {
-      console.error('Error inserting into users table:', insertError.message);
+      if (fetchError) {
+        console.error('Error checking if user exists:', fetchError.message);
+      } else if (!existingUser) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({ id: userId, full_name: trimmedName, email: trimmedEmail });
+
+        if (insertError) {
+          console.error('Error inserting into users table:', insertError.message);
+        }
+      } else {
+          console.log('User already exists in users table.');
+      }}
+
+      Alert.alert(
+        'Success!',
+        'Check your email to confirm your account.',
+        [{ text: 'OK', onPress: () => { 
+          setName('');
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+        }}]
+      );
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      console.error('Unexpected Error:', message);
+      Alert.alert('Error', message);
+    } finally {
+        setIsSubmitting(false);
     }
-  }
-
-  Alert.alert(
-    'Success!',
-    'Check your email to confirm your account.',
-    [{ text: 'OK', onPress: () => { 
-      setName('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-     } }]
-    );
-
-} catch (err: any) {
-  console.error('Unexpected Error:', err);
-  Alert.alert('Error', 'Something went wrong during registration.');
-} finally {
-  setIsSubmitting(false);
-}
   };
 
   return (

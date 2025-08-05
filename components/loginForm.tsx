@@ -37,10 +37,7 @@ export default function LoginForm({
           placeholder={placeholderText}
           secureTextEntry={isPassword && isHidden}
           value={value}
-          onChangeText={(text) => {
-            console.log(`${inputLabel} updated to:`, text);
-            onChangeText(text);
-          }}
+          onChangeText={(text) => {onChangeText(text);}}
           placeholderTextColor="#5C4630"
           autoCapitalize="none"
         />

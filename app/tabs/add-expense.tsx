@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,16 @@ import {
   KeyboardAvoidingView,
   SafeAreaView,
   ScrollView,
-  Alert
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/Feather';
-import { useRouter } from 'expo-router';
-import supabase from '@/lib/supabase';
-import { useEffect } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
-
+  Alert,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import DropDownPicker from "react-native-dropdown-picker";
+import Icon from "react-native-vector-icons/Feather";
+import { useRouter } from "expo-router";
+import supabase from "@/lib/supabase";
+import { useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 type PaymentOption = {
   label: string;
@@ -29,150 +28,170 @@ type PaymentOption = {
 
 export default function AddExpenseScreen() {
   const router = useRouter();
-  const [amount, setAmount] = useState('0.00');
+  const [amount, setAmount] = useState("0.00");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [description, setDescription] = useState('');
-  const [recurrence, setRecurrence] = useState('Monthly');
+  const [description, setDescription] = useState("");
+  const [recurrence, setRecurrence] = useState("Monthly");
   const [transactionTypeIndex, setTransactionTypeIndex] = useState(1);
 
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryValue, setCategoryValue] = useState(null);
   const [categoryItems, setCategoryItems] = useState([
-    { label: 'Food', value: 'Food' },
-    { label: 'Transportation', value: 'Transportation' },
-    { label: 'Groceries', value: 'Groceries' },
-    { label: 'Utilities', value: 'Utilities' },
+    { label: "Food", value: "Food" },
+    { label: "Transportation", value: "Transportation" },
+    { label: "Groceries", value: "Groceries" },
+    { label: "Utilities", value: "Utilities" },
   ]);
 
   const [sourceOpen, setSourceOpen] = useState(false);
-  const [sourceValue, setSourceValue] = useState('Cash'); // Default to 'Cash'
+  const [sourceValue, setSourceValue] = useState("Cash"); // Default to 'Cash'
   const [sourceItems, setSourceItems] = useState<PaymentOption[]>([
-    { label: 'Cash', value: 'Cash' },
-
+    { label: "Cash", value: "Cash" },
   ]);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
-  
-
-
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
   const [recurrenceItems, setRecurrenceItems] = useState([
-    { label: 'Weekly', value: 'Weekly' },
-    { label: 'Bi-Weekly', value: 'Bi-Weekly' },
-    { label: 'Semi-Monthly', value: 'Semi-Monthly' },
-    { label: 'Monthly', value: 'Monthly' },
-    { label: 'Yearly', value: 'Yearly' },
+    { label: "Weekly", value: "Weekly" },
+    { label: "Bi-Weekly", value: "Bi-Weekly" },
+    { label: "Semi-Monthly", value: "Semi-Monthly" },
+    { label: "Monthly", value: "Monthly" },
+    { label: "Yearly", value: "Yearly" },
   ]);
 
-const handleSaveExpense = async () => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    Alert.alert('Error', 'User not authenticated.');
-    return;
-  }
+  const resetForm = () => {
+    setAmount("0.00");
+    setDate(new Date());
+    setDescription("");
+    setCategoryValue(null);
+    setSourceValue("Cash");
+    setSelectedCardId(null);
+    setRecurrence("Monthly");
+    setCategoryOpen(false);
+    setSourceOpen(false);
+    setRecurrenceOpen(false);
+  };
 
-  const expenseAmount = parseFloat(amount);
-
-  const { error: insertError } = await supabase.from('transactions').insert([{
-    amount: expenseAmount,
-    date: date.toISOString(),
-    description,
-    category: categoryValue,
-    payment_method: sourceValue,
-    type: 'expense',
-    is_recurring: true,
-    recurrence_frequency: recurrence,
-    user_id: user.id,
-    card_id: selectedCardId,
-  }]);
-
-  if (insertError) {
-    console.error('❌ Insert transaction error:', insertError.message);
-    Alert.alert('Error', 'Failed to save expense.');
-    return;
-  }
-
-  if (selectedCardId) {
-    const { data: cardData, error: cardError } = await supabase
-      .from('cards')
-      .select('balance, spending_limit, user_id, name')
-      .eq('id', selectedCardId)
-      .single();
-
-    if (cardError || !cardData) {
-      console.error('❌ Fetch card error:', cardError?.message);
-      Alert.alert('Error', 'Unable to retrieve card info.');
+  const handleSaveExpense = async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      Alert.alert("Error", "User not authenticated.");
       return;
     }
 
-    const originalBalance = parseFloat(cardData.balance);
-    const newBalance = originalBalance + expenseAmount;
+    const expenseAmount = parseFloat(amount);
 
-    const { error: updateError } = await supabase
-      .from('cards')
-      .update({ balance: newBalance })
-      .eq('id', selectedCardId);
+    const { error: insertError } = await supabase.from("transactions").insert([
+      {
+        amount: expenseAmount,
+        date: date.toISOString(),
+        description,
+        category: categoryValue,
+        payment_method: sourceValue,
+        type: "expense",
+        is_recurring: true,
+        recurrence_frequency: recurrence,
+        user_id: user.id,
+        card_id: selectedCardId,
+      },
+    ]);
 
-    if (updateError) {
-      console.error('Update card balance error:', updateError.message);
-      Alert.alert('Error', 'Failed to update card balance.');
-    } else {
-      console.log(`Updated "${cardData.name}" balance: ${originalBalance} + ${expenseAmount} = ${newBalance}`);
+    if (insertError) {
+      console.error("Insert transaction error:", insertError.message);
+      Alert.alert("Error", "Failed to save expense.");
+      return;
     }
 
-    if (newBalance > cardData.spending_limit) {
-      await supabase.from('notifications').insert({
-        user_id: cardData.user_id,
-        message: `Your card "${cardData.name}" has exceeded its spending limit.`,
-      });
+    if (selectedCardId) {
+      const { data: cardData, error: cardError } = await supabase
+        .from("cards")
+        .select("balance, spending_limit, user_id, name")
+        .eq("id", selectedCardId)
+        .single();
+
+      if (cardError || !cardData) {
+        console.error("Fetch card error:", cardError?.message);
+        Alert.alert("Error", "Unable to retrieve card info.");
+        return;
+      }
+
+      const originalBalance = parseFloat(cardData.balance);
+      const newBalance = originalBalance + expenseAmount;
+
+      const { error: updateError } = await supabase
+        .from("cards")
+        .update({ balance: newBalance })
+        .eq("id", selectedCardId);
+
+      if (updateError) {
+        console.error("Update card balance error:", updateError.message);
+        Alert.alert("Error", "Failed to update card balance.");
+      } else {
+        console.log(
+          `Updated "${cardData.name}" balance: ${originalBalance} + ${expenseAmount} = ${newBalance}`
+        );
+      }
+
+      if (newBalance > cardData.spending_limit) {
+        await supabase.from("notifications").insert({
+          user_id: cardData.user_id,
+          message: `Your card "${cardData.name}" has exceeded its spending limit.`,
+        });
+      }
     }
-  }
 
-  Alert.alert('✅ Expense saved!', '', [
-    { text: 'OK', onPress: () => router.replace('/tabs') }
-  ]);
-};
+    Alert.alert("Expense saved!", "", [
+      {
+        text: "OK",
+          onPress: () => {
+          resetForm();
+          router.replace("/tabs");
+        },
+      },
+    ]);
+  };
 
-
- const fetchCards = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+  const fetchCards = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const { data: cards, error } = await supabase
-      .from('cards')
-      .select('id, name')
-      .eq('user_id', user.id);
+      .from("cards")
+      .select("id, name")
+      .eq("user_id", user.id);
 
     if (error) {
-      console.error('Error fetching cards:', error);
+      console.error("Error fetching cards:", error);
       return;
     }
 
-    const cardOptions = cards.map(card => ({
+    const cardOptions = cards.map((card) => ({
       label: `Card - ${card.name}`,
       value: card.name,
       cardId: card.id,
     }));
 
-
-    setSourceItems([{ label: 'Cash', value: 'Cash' }, ...cardOptions]);
+    setSourceItems([{ label: "Cash", value: "Cash" }, ...cardOptions]);
   };
-useEffect(() => {
-  fetchCards();
-}, []);
-useFocusEffect(
-  useCallback(() => {
+  useEffect(() => {
     fetchCards();
-  }, [])
-);
-
-
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCards();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.scroll}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
         <View style={styles.container}>
@@ -180,17 +199,35 @@ useFocusEffect(
             <Text style={styles.label}>TRANSACTION TYPE</Text>
             <View style={styles.toggleWrapper}>
               <TouchableOpacity
-                style={[styles.toggleButton, transactionTypeIndex === 0 && styles.selectedToggle]}
-                onPress={() => router.replace('/tabs/add-income')}
+                style={[
+                  styles.toggleButton,
+                  transactionTypeIndex === 0 && styles.selectedToggle,
+                ]}
+                onPress={() => router.replace("/tabs/add-income")}
               >
-                <Text style={transactionTypeIndex === 0 ? styles.toggleTextSelected : styles.toggleTextUnselected}>
+                <Text
+                  style={
+                    transactionTypeIndex === 0
+                      ? styles.toggleTextSelected
+                      : styles.toggleTextUnselected
+                  }
+                >
                   Income
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.toggleButton, transactionTypeIndex === 1 && styles.selectedToggle]}
+                style={[
+                  styles.toggleButton,
+                  transactionTypeIndex === 1 && styles.selectedToggle,
+                ]}
               >
-                <Text style={transactionTypeIndex === 1 ? styles.toggleTextSelected : styles.toggleTextUnselected}>
+                <Text
+                  style={
+                    transactionTypeIndex === 1
+                      ? styles.toggleTextSelected
+                      : styles.toggleTextUnselected
+                  }
+                >
                   Expense
                 </Text>
               </TouchableOpacity>
@@ -225,7 +262,10 @@ useFocusEffect(
                   setItems={setCategoryItems}
                   placeholder="Select Category"
                   style={styles.dropdown}
-                  dropDownContainerStyle={[styles.dropdownBox, { maxHeight: 300 }]}
+                  dropDownContainerStyle={[
+                    styles.dropdownBox,
+                    { maxHeight: 300 },
+                  ]}
                   textStyle={styles.dropdownText}
                   listMode="FLATLIST"
                   flatListProps={{
@@ -237,24 +277,39 @@ useFocusEffect(
                       index,
                     }),
                   }}
-                  zIndex={2000}
+                  zIndex={3000}
                   zIndexInverse={1000}
                 />
               </View>
               <View style={styles.halfInputContainer}>
                 <Text style={styles.inputLabel}>Date</Text>
-                <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateBox}>
-                  <Text style={styles.dateText}>{date.toISOString().split('T')[0]}</Text>
-                  <Icon name="calendar" size={18} color="#5C4630" style={styles.calendarIcon} />
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.dateBox}
+                >
+                  <Text style={styles.dateText}>
+                    {date.toISOString().split("T")[0]}
+                  </Text>
+                  <Icon
+                    name="calendar"
+                    size={18}
+                    color="#5C4630"
+                    style={styles.calendarIcon}
+                  />
                 </TouchableOpacity>
                 {showDatePicker && (
                   <DateTimePicker
                     value={date}
                     mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    display={Platform.OS === "ios" ? "default" : "default"}
                     onChange={(event, selectedDate) => {
                       setShowDatePicker(false);
                       if (selectedDate) setDate(selectedDate);
+                    }}
+                    style={{
+                      marginBottom: 10,
+                      alignSelf: "flex-end",
+                      marginTop: 10,
                     }}
                   />
                 )}
@@ -279,7 +334,9 @@ useFocusEffect(
               setValue={(callback) => {
                 const value = callback(sourceValue);
                 setSourceValue(value);
-                const selected = sourceItems.find(item => item.value === value);
+                const selected = sourceItems.find(
+                  (item) => item.value === value
+                );
                 setSelectedCardId(selected?.cardId || null);
               }}
               setItems={setSourceItems}
@@ -288,14 +345,16 @@ useFocusEffect(
               dropDownContainerStyle={[styles.dropdownBox, { maxHeight: 300 }]}
               textStyle={styles.dropdownText}
               listMode="SCROLLVIEW"
-              zIndex={3000}
+              zIndex={2000}
               zIndexInverse={2000}
             />
           </View>
           <View style={[styles.recurrenceBox, { zIndex: 1000 }]}>
             <View>
               <Text style={styles.recurrenceLabel}>Recurring Expense</Text>
-              <Text style={styles.recurrenceSubtext}>This expense repeats monthly</Text>
+              <Text style={styles.recurrenceSubtext}>
+                This expense repeats monthly
+              </Text>
             </View>
             <View style={styles.recurrenceDropdown}>
               <DropDownPicker
@@ -325,7 +384,10 @@ useFocusEffect(
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveExpense}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSaveExpense}
+          >
             <Text style={styles.saveButtonText}>Save Expense</Text>
           </TouchableOpacity>
         </View>
@@ -337,7 +399,7 @@ useFocusEffect(
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: '#FFF8F2',
+    backgroundColor: "#FFF8F2",
   },
   container: {
     flexGrow: 1,
@@ -345,7 +407,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   cardBox: {
-    backgroundColor: '#F5E5DC',
+    backgroundColor: "#F5E5DC",
     paddingTop: 14,
     paddingBottom: 20,
     paddingHorizontal: 15,
@@ -353,55 +415,58 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   label: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    color: '#3A2A21',
+    color: "#3A2A21",
   },
   toggleWrapper: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     borderRadius: 10,
-    overflow: 'hidden',
+    overflow: "hidden",
     height: 40,
   },
   toggleButton: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     height: 40,
   },
   selectedToggle: {
-    backgroundColor: '#C6844F',
+    backgroundColor: "#C6844F",
   },
   toggleTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "bold",
   },
   toggleTextUnselected: {
-    color: '#5C4630',
+    color: "#5C4630",
   },
   amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 15,
-    paddingVertical: 0,
+    paddingVertical: 6,
+    height: 44,
   },
   amountSymbol: {
-    fontSize: 30,
-    color: '#D9534F',
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#D9534F",
     marginRight: 10,
   },
   amountInput: {
-    fontSize: 30,
-    color: '#D9534F',
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#D9534F",
     flex: 1,
-    textAlign: 'right',
+    textAlign: "right",
   },
   rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 10,
   },
   halfInputContainer: {
@@ -410,42 +475,43 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     marginBottom: 5,
-    fontWeight: '600',
-    color: '#3A2A21',
+    fontWeight: "600",
+    color: "#3A2A21",
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
-    color: '#3A2A21',
+    color: "#3A2A21",
+    height: 44,
   },
   dateBox: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     height: 50,
     paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     elevation: 1,
   },
   dateText: {
     fontSize: 14,
-    color: '#3A2A21',
+    color: "#3A2A21",
   },
   calendarIcon: {
     marginLeft: 10,
   },
   dropdown: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     height: 44,
     borderWidth: 0,
     elevation: 1,
   },
   dropdownSmall: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     height: 44,
     width: 140,
@@ -453,49 +519,49 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   dropdownBox: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 0,
     elevation: 2,
     marginTop: 2,
   },
   dropdownText: {
     fontSize: 14,
-    color: '#3A2A21',
+    color: "#3A2A21",
   },
   recurrenceBox: {
-    backgroundColor: '#C6844F',
+    backgroundColor: "#C6844F",
     borderRadius: 10,
     paddingTop: 14,
     paddingHorizontal: 20,
     paddingBottom: 20,
     marginBottom: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   recurrenceLabel: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
   recurrenceSubtext: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 10,
   },
   recurrenceDropdown: {
     marginLeft: 10,
   },
   saveButton: {
-    backgroundColor: '#D9534F',
-    alignSelf: 'flex-end',
+    backgroundColor: "#D9534F",
+    alignSelf: "flex-end",
     paddingHorizontal: 25,
     paddingVertical: 12,
     borderRadius: 20,
-    width: '45%',
+    width: "45%",
   },
   saveButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "bold",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
