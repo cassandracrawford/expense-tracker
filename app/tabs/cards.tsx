@@ -150,6 +150,8 @@ export default function CardsScreen() {
     }
   }, [isFocused, currentUser, fetchTransactions, fetchCards]);
 
+  // Note: In future development, current card balance or initial balance will be stored in the DB
+  // and will be included in the total credit card expenses. For now, only recorded transactions are considered.
   const cardTotal = transactions
     .filter((t) => t.card_id && t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -371,7 +373,7 @@ export default function CardsScreen() {
                 index,
               })}
               renderItem={({ item }) => {
-                const total = transactions
+                const total = item.balance + transactions
                   .filter((t) => t.card_id === item.id && t.type === "expense")
                   .reduce((sum, t) => sum + Number(t.amount), 0);
                 return (
