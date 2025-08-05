@@ -99,7 +99,7 @@ export default function AddSavingsModal({
             }}
           >
             <Text
-              style={{ color: "#A3C9A8", fontWeight: "bold", fontSize: 18 }}
+              style={{ color: "#A3C9A8", fontWeight: "bold", fontSize: 18, lineHeight: 40 }}
             >
               Custom Amount:
             </Text>
@@ -110,6 +110,7 @@ export default function AddSavingsModal({
                     fontFamily: "Montserrat_700Bold",
                     fontSize: 14,
                     color: "#A3C9A8",
+                    paddingRight: 5,
                   }}
                 >
                   $
