@@ -1,17 +1,26 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFonts as useMontserratFonts, Montserrat_400Regular, Montserrat_700Bold, Montserrat_500Medium } from '@expo-google-fonts/montserrat';
-import { useFonts as useOpenSansFonts, OpenSans_400Regular, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
-import { useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  useFonts as useMontserratFonts,
+  Montserrat_400Regular,
+  Montserrat_700Bold,
+  Montserrat_500Medium,
+} from "@expo-google-fonts/montserrat";
+import {
+  useFonts as useOpenSansFonts,
+  OpenSans_400Regular,
+  OpenSans_700Bold,
+} from "@expo-google-fonts/open-sans";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
-import BudgetCard from '../../components/budgetComponent';
-import GoalsCard from '@/components/goalsComponent';
-import BudgetModal from '@/components/addBudgetModal';
-import SavingsModal from '@/components/addSavingsModal';
+import BudgetCard from "../../components/budgetComponent";
+import GoalsCard from "@/components/goalsComponent";
+import BudgetModal from "@/components/addBudgetModal";
+import SavingsModal from "@/components/addSavingsModal";
 
-import { useUserGoalData } from '@/hooks/useUserGoalData';
-import { useUserBudgetData } from '../../hooks/useUserBudgetData';
-import supabase from '@/lib/supabase';
+import { useUserGoalData } from "@/hooks/useUserGoalData";
+import { useUserBudgetData } from "../../hooks/useUserBudgetData";
+import supabase from "@/lib/supabase";
 
 export default function GoalScreen() {
   const [montserratLoaded] = useMontserratFonts({
@@ -39,24 +48,26 @@ export default function GoalScreen() {
     refresh,
   } = useUserGoalData();
 
-  const budgetProgress = totalBudget > 0 ? Math.min(totalSpent / totalBudget, 1) : 0;
-  const savingsProgress = totalSavingsGoal > 0 ? Math.min(totalSavings / totalSavingsGoal, 1) : 0;
+  const budgetProgress =
+    totalBudget > 0 ? Math.min(totalSpent / totalBudget, 1) : 0;
+  const savingsProgress =
+    totalSavingsGoal > 0 ? Math.min(totalSavings / totalSavingsGoal, 1) : 0;
 
   const handleDeleteGoal = async (id: string) => {
-    console.log('Try deleting goal:', id);
-    const { error } = await supabase.from('goals').delete().eq('id', id);
+    console.log("Try deleting goal:", id);
+    const { error } = await supabase.from("goals").delete().eq("id", id);
     if (error) {
-      console.error('Failed to delete goal:', error.message);
+      console.error("Failed to delete goal:", error.message);
     } else {
-      console.log('Goal deleted');
+      console.log("Goal deleted");
       await refresh();
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      refresh();       // refresh goals and totals
-      fetchBudgets();  // refresh budgets
+      refresh(); // refresh goals and totals
+      fetchBudgets(); // refresh budgets
     }, [])
   );
 
@@ -68,31 +79,44 @@ export default function GoalScreen() {
       <View style={styles.subContainer}>
         <View style={styles.headerRow}>
           <Text style={styles.containerTitle}>Total Budget</Text>
-          <Text style={styles.containterSubTitle}>${totalSpent.toFixed(2)} / ${totalBudget.toFixed(2)}</Text>
+          <Text style={styles.containterSubTitle}>
+            ${totalSpent.toFixed(2)} / ${totalBudget.toFixed(2)}
+          </Text>
         </View>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { flex: budgetProgress * 100 }]} />
           <View style={{ flex: 100 - budgetProgress * 100 }} />
         </View>
-        <Text style={styles.containterSubTitle}>Total budget set this month.</Text>
+        <Text style={styles.containterSubTitle}>
+          Total budget set this month.
+        </Text>
       </View>
 
       {/* Total Savings Section */}
       <View style={[styles.subContainer, { marginBottom: 20 }]}>
         <View style={styles.headerRow}>
           <Text style={styles.containerTitle}>Total Savings</Text>
-          <Text style={styles.containterSubTitle}>${totalSavings.toFixed(2)} / ${totalSavingsGoal.toFixed(2)}</Text>
+          <Text style={styles.containterSubTitle}>
+            ${totalSavings.toFixed(2)} / ${totalSavingsGoal.toFixed(2)}
+          </Text>
         </View>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { flex: savingsProgress * 100 }]} />
+          <View
+            style={[styles.progressFill, { flex: savingsProgress * 100 }]}
+          />
           <View style={{ flex: 100 - savingsProgress * 100 }} />
         </View>
-        <Text style={styles.containterSubTitle}>{activeGoalsCount} active goals.</Text>
+        <Text style={styles.containterSubTitle}>
+          {activeGoalsCount} active goals.
+        </Text>
       </View>
 
       {/* Monthly Budget Card */}
-      <View style={{ position: 'relative', marginBottom: 10 }}>
-        <Pressable style={styles.fab} onPress={() => setModalBudgetVisible(true)}>
+      <View style={{ position: "relative", marginBottom: 10 }}>
+        <Pressable
+          style={styles.fab}
+          onPress={() => setModalBudgetVisible(true)}
+        >
           <Text style={styles.fabText}>+ Add Budget</Text>
         </Pressable>
 
@@ -109,23 +133,38 @@ export default function GoalScreen() {
         <View style={styles.subContainer}>
           <Text style={styles.containerTitle}>Monthly Budget</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: 'row', gap: 20 }}>
-              {budgets.map((item) => (
-                <BudgetCard
-                  key={item.category}
-                  category={item.category}
-                  spentBudget={item.spent}
-                  categoryBudget={item.budget}
-                />
-              ))}
+            <View style={{ flexDirection: "row", gap: 20 }}>
+              {budgets.length === 0 ? (
+                <Text
+                  style={{
+                    color: "#5C4630",
+                    marginVertical: 10,
+                    fontStyle: "italic",
+                  }}
+                >
+                  No budget added yet.
+                </Text>
+              ) : (
+                budgets.map((item) => (
+                  <BudgetCard
+                    key={item.category}
+                    category={item.category}
+                    spentBudget={item.spent}
+                    categoryBudget={item.budget}
+                  />
+                ))
+              )}
             </View>
           </ScrollView>
         </View>
       </View>
 
       {/* 🎯 Savings Goals */}
-      <View style={{ position: 'relative' }}>
-        <Pressable style={styles.fab} onPress={() => setModalSavingsVisible(true)}>
+      <View style={{ position: "relative" }}>
+        <Pressable
+          style={styles.fab}
+          onPress={() => setModalSavingsVisible(true)}
+        >
           <Text style={styles.fabText}>+ Add Goal</Text>
         </Pressable>
 
@@ -138,19 +177,31 @@ export default function GoalScreen() {
         <View style={styles.subContainer}>
           <Text style={styles.containerTitle}>Savings Goals</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: 'row', gap: 20 }}>
-              {goalList.map((goal) => (
-                <GoalsCard
-                  goalId={goal.id}
-                  key={goal.id}
-                  name={goal.name}
-                  targetAmount={goal.target_amount}
-                  startAmount={goal.start_amount}
-                  targetDate={goal.target_date}
-                  onDelete={() => handleDeleteGoal(goal.id)}
-                  onSaveComplete={refresh}
-                />
-              ))}
+            <View style={{ flexDirection: "row", gap: 20 }}>
+              {goalList.length === 0 ? (
+                <Text
+                  style={{
+                    color: "#5C4630",
+                    marginVertical: 10,
+                    fontStyle: "italic",
+                  }}
+                >
+                  No goals added yet.
+                </Text>
+              ) : (
+                goalList.map((goal) => (
+                  <GoalsCard
+                    goalId={goal.id}
+                    key={goal.id}
+                    name={goal.name}
+                    targetAmount={goal.target_amount}
+                    startAmount={goal.start_amount}
+                    targetDate={goal.target_date}
+                    onDelete={() => handleDeleteGoal(goal.id)}
+                    onSaveComplete={refresh}
+                  />
+                ))
+              )}
             </View>
           </ScrollView>
         </View>
@@ -162,57 +213,57 @@ export default function GoalScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F2',
+    backgroundColor: "#FFF8F2",
     paddingHorizontal: 16,
   },
   subContainer: {
-    backgroundColor: '#F5E5DC',
+    backgroundColor: "#F5E5DC",
     marginVertical: 8,
     borderRadius: 20,
     padding: 20,
   },
   containerTitle: {
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: "Poppins_500Medium",
     fontSize: 18,
-    color: '#3A2A21',
-    textTransform: 'uppercase',
+    color: "#3A2A21",
+    textTransform: "uppercase",
   },
   containterSubTitle: {
-    fontFamily: 'Montserrat_500Medium',
+    fontFamily: "Montserrat_500Medium",
     fontSize: 16,
-    color: '#5C4630',
+    color: "#5C4630",
   },
   progressBar: {
     height: 20,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
     marginBottom: 8,
   },
   progressFill: {
-    backgroundColor: '#C6844F',
+    backgroundColor: "#C6844F",
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
     marginBottom: 10,
   },
   fab: {
     width: 150,
     height: 40,
-    position: 'absolute',
+    position: "absolute",
     top: -10,
-    left: '75%',
+    left: "75%",
     transform: [{ translateX: -75 }],
-    backgroundColor: '#C6844F',
+    backgroundColor: "#C6844F",
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 10,
   },
   fabText: {
-    fontFamily: 'Montserrat_700Bold',
-    color: '#FFFFFF',
+    fontFamily: "Montserrat_700Bold",
+    color: "#FFFFFF",
     fontSize: 14,
   },
 });

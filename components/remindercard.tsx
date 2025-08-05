@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   empty: {
     fontSize: 14,
-    color: '#888',
+    color: '#5C4630',
     textAlign: 'center',
   },
 });

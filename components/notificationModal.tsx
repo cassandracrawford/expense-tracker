@@ -33,7 +33,7 @@ export default function NotificationPanel({ isVisible, onClose, userId }: Props)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("❌ Error fetching notifications:", error.message);
+      console.error("Error fetching notifications:", error.message);
     } else {
       setNotifications(data || []);
     }
@@ -47,7 +47,7 @@ export default function NotificationPanel({ isVisible, onClose, userId }: Props)
         .eq("is_read", false);
 
     if (error) {
-        console.error("❌ Error marking notifications as read:", error.message);
+        console.error("Error marking notifications as read:", error.message);
     }
     };
 
@@ -65,7 +65,7 @@ export default function NotificationPanel({ isVisible, onClose, userId }: Props)
         .eq("user_id", userId);
 
     if (error) {
-        console.error("❌ Error clearing notifications:", error.message);
+        console.error("Error clearing notifications:", error.message);
     } else {
         setNotifications([]);
     }

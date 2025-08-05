@@ -44,7 +44,7 @@ const TransactionList = ({ transactions, onDeleteComplete }: Props) => {
             {sign} ${item.amount.toFixed(2)}
           </Text>
           <TouchableOpacity onPress={() => handleDelete(item.id)}>
-            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#A35C5C" />
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#5C4630" />
           </TouchableOpacity>
         </View>
       </View>

@@ -68,7 +68,7 @@ export default function AddNewCardModal({ visible, onClose }: SavingsModalProps)
                         color: '#5C4630',
                         fontFamily: 'Montserrat_400Regular'
                     }}
-                    placeholder='e.g. Dream Vacation, New Car'
+                    placeholder='e.g. CIBC Credit Card'
                     placeholderTextColor='#BDB1A5'
                     value={cardName}
                     onChangeText={setCardName}
