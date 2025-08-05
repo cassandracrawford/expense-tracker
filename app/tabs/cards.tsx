@@ -290,7 +290,7 @@ export default function CardsScreen() {
                 </View>
                 <View style={styles.subContainer}>
                   <Text style={[styles.title, { textAlign: "center" }]}>
-                    Cash Expense
+                    Cash{"\n"}Expense
                   </Text>
                   <Text style={styles.totalAmount}>
                     ${cashTotal.toFixed(2)}

@@ -88,7 +88,7 @@ export default function NotificationPanel({ isVisible, onClose, userId }: Props)
           ) : notifications.length === 0 ? (
             <Text style={styles.emptyText}>No notifications</Text>
           ) : (
-            <ScrollView style={{ maxHeight: 400 }}>
+            <ScrollView style={{ minHeight: 400 }}>
               {notifications.map((notif) => (
                 <View key={notif.id} style={styles.card}>
                   <Text style={styles.cardText}>{notif.message}</Text>
